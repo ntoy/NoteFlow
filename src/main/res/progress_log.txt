@@ -1,0 +1,7 @@
+Fri 11/24: sitting in Starbucks in NY
+Seeing if I'm done with fixing the stupidity of the fraction long division thing
+Fixed it + added unit tests
+
+Thu 11/30: added toString to many classes (note, pitch, etc)
+Modified xslt files to have absolute path instead (will have to systematize this later)
+
