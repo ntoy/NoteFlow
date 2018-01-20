@@ -170,8 +170,6 @@ public class MusicXMLNoteReader {
                     Element pitchStepElement = null, pitchOctaveElement = null, pitchAlterElement = null,
                             durationElement = null, restElement = null, backupElement;
 
-
-
                     try {
                         pitchStepElement = (Element) xPath.compile("./pitch/step")
                                 .evaluate(noteNode, XPathConstants.NODE);
