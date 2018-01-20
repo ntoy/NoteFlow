@@ -5,3 +5,5 @@ Fixed it + added unit tests
 Thu 11/30: added toString to many classes (note, pitch, etc)
 Modified xslt files to have absolute path instead (will have to systematize this later)
 
+Thu 12/7: created git repository
+
