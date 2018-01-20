@@ -8,7 +8,7 @@ public class Note {
 
     private int voice;
 
-    public Note(Pitch pitch, MusicXMLAbsTime onsetTime, MusicXMLDur duration) {
+    public Note(Pitch pitch, MusicXMLAbsTime onsetTime, MusicXMLDur duration, int voice) {
         this.pitch = pitch;
         this.onsetTime = onsetTime;
         this.duration = duration;
