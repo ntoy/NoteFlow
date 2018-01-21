@@ -14,6 +14,9 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -97,6 +100,9 @@ public class MusicXMLNoteReader {
 
         @Override
         public void run() {
+            CompareByPart compareByPart = new CompareByPart();
+            CompareByOnsetTime compareByOnsetTime = new CompareByOnsetTime();
+
             // start at time zero
             MusicXMLAbsTime curTime = new MusicXMLAbsTime(0, 0, 1);
 
@@ -134,13 +140,14 @@ public class MusicXMLNoteReader {
                 e.printStackTrace();
                 System.exit(1);
             }
-
             Element measureDivisionsElement = null;
             int divisions = 0;
 
             // iterate over measures
+            System.out.println("der be " + measureList.getLength() + "measures");
             for (int i = 0; i < measureList.getLength(); i++) {
                 Node measureNode = measureList.item(i);
+                ArrayList<Note> notes = new ArrayList<>();
 
                 // get number of divisions in measure
                 try {
@@ -154,62 +161,89 @@ public class MusicXMLNoteReader {
                     divisions = Integer.parseInt(measureDivisionsElement.getTextContent());
 
                 // get list of notes in measure
-                NodeList noteList = null;
+                NodeList noteBackupList = null;
                 try {
-                    noteList = (NodeList) xPath.compile("./part/note").evaluate(
+                    noteBackupList = (NodeList) xPath.compile("./part/note | ./part/backup").evaluate(
                             measureNode, XPathConstants.NODESET);
                 } catch (XPathExpressionException e) {
                     e.printStackTrace();
                     System.exit(1);
                 }
 
-                // iterate over notes in measure
-                for (int j = 0; j < noteList.getLength(); j++) {
-                    Node noteNode = noteList.item(j);
-                    // TODO: optimize by compiling expressions outside of loop
-                    Element pitchStepElement = null, pitchOctaveElement = null, pitchAlterElement = null,
-                            durationElement = null, restElement = null, backupElement;
+                // iterate over notes/backups in measure
+                for (int j = 0; j < noteBackupList.getLength(); j++) {
+                    Node noteOrBackup = noteBackupList.item(j);
 
-                    try {
-                        pitchStepElement = (Element) xPath.compile("./pitch/step")
-                                .evaluate(noteNode, XPathConstants.NODE);
-                        pitchOctaveElement = (Element) xPath.compile("./pitch/octave")
-                                .evaluate(noteNode, XPathConstants.NODE);
-                        pitchAlterElement = (Element) xPath.compile("./pitch/alter")
-                                .evaluate(noteNode, XPathConstants.NODE);
-                        durationElement = (Element) xPath.compile("./duration")
-                                .evaluate(noteNode, XPathConstants.NODE);
-                        restElement = (Element) xPath.compile("./rest")
-                                .evaluate(noteNode, XPathConstants.NODE);
-                    } catch (XPathExpressionException e) {
-                        e.printStackTrace();
-                        System.exit(1);
-                    }
+                    if (noteOrBackup.getNodeName().equals("note")) {
+                        Node noteNode = noteOrBackup;
 
-                    MusicXMLDur duration = new MusicXMLDur(Integer.parseInt(durationElement.getTextContent()),
-                            divisions);
+                        // TODO: optimize by compiling expressions outside of loop
+                        Element pitchStepElement = null, pitchOctaveElement = null, pitchAlterElement = null,
+                                durationElement = null, restElement = null;
 
-                    // if this is not a rest
-                    if (restElement == null) {
-                        String pitchStep = pitchStepElement.getTextContent();
-                        int pitchOctave = Integer.parseInt(pitchOctaveElement.getTextContent());
-                        // presumably null iff not found?
-                        int alter = 0;
-                        if (pitchAlterElement != null) {
-                            alter = Integer.parseInt(pitchAlterElement.getTextContent());
-                        }
-                        Pitch pitch = new Pitch(pitchOctave, pitchStep, alter);
-                        Note note = new Note(pitch, curTime, duration);
                         try {
-                            queue.put(Optional.of(note));
-                        } catch (InterruptedException e) {
+                            pitchStepElement = (Element) xPath.compile("./pitch/step")
+                                    .evaluate(noteNode, XPathConstants.NODE);
+                            pitchOctaveElement = (Element) xPath.compile("./pitch/octave")
+                                    .evaluate(noteNode, XPathConstants.NODE);
+                            pitchAlterElement = (Element) xPath.compile("./pitch/alter")
+                                    .evaluate(noteNode, XPathConstants.NODE);
+                            durationElement = (Element) xPath.compile("./duration")
+                                    .evaluate(noteNode, XPathConstants.NODE);
+                            restElement = (Element) xPath.compile("./rest")
+                                    .evaluate(noteNode, XPathConstants.NODE);
+                        } catch (XPathExpressionException e) {
                             e.printStackTrace();
                             System.exit(1);
                         }
-                    }
 
-                    // advance time by duration of note
-                    curTime = curTime.add(duration);
+                        MusicXMLDur duration = new MusicXMLDur(Integer.parseInt(durationElement.getTextContent()),
+                                divisions);
+
+                        // if this is not a rest
+                        if (restElement == null) {
+                            String pitchStep = pitchStepElement.getTextContent();
+                            int pitchOctave = Integer.parseInt(pitchOctaveElement.getTextContent());
+                            // presumably null iff not found?
+                            int alter = 0;
+                            if (pitchAlterElement != null) {
+                                alter = Integer.parseInt(pitchAlterElement.getTextContent());
+                            }
+                            Pitch pitch = new Pitch(pitchOctave, pitchStep, alter);
+
+                            // TODO: enter correct part
+                            Note note = new Note(pitch, curTime, duration, 1);
+                            notes.add(note);
+                        }
+
+                        // advance time by duration of note
+                        curTime = curTime.add(duration);
+                    }
+                    else { // if is backup
+                        Node backupNode = noteOrBackup;
+                        Element backupDurElement = null;
+                        try {
+                            backupDurElement = (Element) xPath.compile("./duration")
+                                    .evaluate(backupNode, XPathConstants.NODE);
+                        } catch (XPathExpressionException e) {
+                            e.printStackTrace();
+                            System.exit(1);
+                        }
+                        int backupDur = Integer.parseInt(backupDurElement.getTextContent());
+                        curTime = curTime.add(new MusicXMLDur(-backupDur, divisions));
+                    }
+                }
+                // lexicographically sort by onset time (major) and part (minor)
+                Collections.sort(notes, compareByPart);
+                Collections.sort(notes, compareByOnsetTime);
+
+                for (Note note : notes) {
+                    try {
+                        queue.put(Optional.of(note));
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        System.exit(1);
+                    }
                 }
             }
             try {
@@ -218,6 +252,20 @@ public class MusicXMLNoteReader {
                 e.printStackTrace();
                 System.exit(1);
             }
+        }
+    }
+
+    private class CompareByPart implements Comparator<Note> {
+        @Override
+        public int compare(Note o1, Note o2) {
+            return o1.getPart() - o2.getPart();
+        }
+    }
+
+    private class CompareByOnsetTime implements Comparator<Note> {
+        @Override
+        public int compare(Note o1, Note o2) {
+            return o1.getOnsetTime().compareTo(o2.getOnsetTime());
         }
     }
 
