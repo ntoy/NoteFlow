@@ -6,13 +6,13 @@ public class Note {
     private MusicXMLAbsTime onsetTime;
     private MusicXMLDur duration;
 
-    private int part;
+    private int voice;
 
-    public Note(Pitch pitch, MusicXMLAbsTime onsetTime, MusicXMLDur duration, int part) {
+    public Note(Pitch pitch, MusicXMLAbsTime onsetTime, MusicXMLDur duration, int voice) {
         this.pitch = pitch;
         this.onsetTime = onsetTime;
         this.duration = duration;
-        this.part = part;
+        this.voice = voice;
     }
 
     public Pitch getPitch() {
@@ -27,8 +27,8 @@ public class Note {
         return duration;
     }
 
-    public int getPart() {
-        return part;
+    public int getVoice() {
+        return voice;
     }
 
     public void setPitch(Pitch pitch) {
@@ -43,13 +43,13 @@ public class Note {
         this.duration = duration;
     }
 
-    public void setPart(int part) {
-        this.part = part;
+    public void setVoice(int voice) {
+        this.voice = voice;
     }
 
     @Override
     public String toString() {
         return pitch.toString() + " @ " + onsetTime.toString() + " for " + duration.toString()
-                + "in [part:" + part + "]";
+                + " in [voice:" + voice + "]";
     }
 }
