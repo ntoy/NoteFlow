@@ -40,7 +40,7 @@ public class MusicXMLAbsTime implements Comparable<MusicXMLAbsTime> {
 
     @Override
     public String toString() {
-        return "[time:" + quarterNoteOffset + "+" + quarterNoteFrac + "]";
+        return "[time:" + quarterNoteOffset + " + " + quarterNoteFrac + "]";
     }
 
     // compare with lexicographical order
