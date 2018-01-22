@@ -3,6 +3,7 @@ package main.java;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 
+// TODO: add some time smoothing (maybe)
 public class KeyAnalyzer {
     private ArrayBlockingQueue<Optional<NoteInContext>> queue;
     private Boolean streamOver; // whether we're done with all notes to read
@@ -82,6 +83,8 @@ public class KeyAnalyzer {
             MusicXMLNoteReader noteReader = new MusicXMLNoteReader(filename);
             Node windowCenter = new Node(noteReader.getNext());
             Node windowStart = windowCenter, windowEnd = windowCenter;
+            // the right side of the window shall be half the size of the left side
+            MusicXMLDur rRadius = radius.multiply(new MusicXMLDur(3, 4));
             Note nextNote = null;
 
             while (windowCenter != null) {
@@ -95,7 +98,7 @@ public class KeyAnalyzer {
                     windowStart = windowStart.next;
                 }
                 // expand window to the right
-                while (windowCenter.content.getOnsetTime().add(radius).compareTo(windowEnd.content.getOnsetTime()) > 0) {
+                while (windowCenter.content.getOnsetTime().add(rRadius).compareTo(windowEnd.content.getOnsetTime()) > 0) {
                     nextNote = noteReader.getNext();
                     if (nextNote == null)
                         break;
