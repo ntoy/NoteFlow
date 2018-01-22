@@ -2,6 +2,7 @@ package main.java;
 
 public class NoteInContext {
     private Note note;
+    // key < 12 is major, key >= 12 is (key - 12) minor
     private int key;
 
     // a non-mutation-safe constructor
