@@ -18,6 +18,10 @@ public class MusicXMLDur implements Comparable<MusicXMLDur> {
         return value;
     }
 
+    public MusicXMLDur add(MusicXMLDur that) {
+        return new MusicXMLDur(this.value.add(that.value));
+    }
+
     @Override
     public String toString() {
         return "[dur:" + value + "]";
