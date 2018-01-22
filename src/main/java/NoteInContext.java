@@ -26,4 +26,17 @@ public class NoteInContext {
     public void setKey(int key) {
         this.key = key;
     }
+
+    @Override
+    public String toString() {
+        return note.toString() + " in " + new Pitch(0, key, 0).getPitchNameSharp()
+                + (key < 12 ? " major" : " minor");
+    }
+
+    public static void main(String[] args) {
+        Note note = new Note(new Pitch(60), new MusicXMLAbsTime(2, 1, 4),
+                new MusicXMLDur(1, 4), 1);
+        System.out.println(new NoteInContext(note, 3));
+        System.out.println(new NoteInContext(note, 15));
+    }
 }
