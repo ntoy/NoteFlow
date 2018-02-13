@@ -11,7 +11,7 @@ public class Main {
 
         File inputFile = new File(args[0]);
         Pipe<Note> notePipe = new Pipe<>(16);
-        Thread musicMXLNoteReader = new Thread(new MusicMXLNoteReader(inputFile, notePipe.source));
+        Thread musicMXLNoteReader = new Thread(new MusicXMLNoteReader(inputFile, notePipe.source));
         Pipe<NoteInContext> noteInContextPipe = new Pipe<>(16);
         Thread keyAnalyzer = new Thread(new KeyAnalyzer(notePipe.sink, noteInContextPipe.source,
                 new MusicXMLDur(8, 1)));
