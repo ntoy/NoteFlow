@@ -1,14 +1,9 @@
 package main.java;
 
-import java.util.Optional;
-import java.util.concurrent.ArrayBlockingQueue;
+public class KeyAnalyzer implements Runnable {
 
-// TODO: add some time smoothing (maybe)
-public class KeyAnalyzer {
-    private ArrayBlockingQueue<Optional<NoteInContext>> queue;
-    private Boolean streamOver; // whether we're done with all notes to read
-    private Thread noteProducer;
-    private volatile boolean keepGoing; // whether the client still wishes to keep reading
+    private Pipe<Note>.PipeSink inputPipe;
+    private Pipe<NoteInContext>.PipeSource outputPipe;
     private MusicXMLDur radius;
 
     private static final int BUFFER_SIZE = 32;
@@ -19,143 +14,68 @@ public class KeyAnalyzer {
     private static final double[] MIN_DEGREE_SCORES =
             {1.0f, 0.0f, 0.2f, 0.6f, 0.0f, 0.4f, 0.1f, 0.8f, 0.4f, 0.0f, 0.4f, 0.6f};
 
-    public KeyAnalyzer(String filename, MusicXMLDur radius) {
-        streamOver = false;
-        keepGoing = true;
+    public KeyAnalyzer(Pipe<Note>.PipeSink inputPipe, Pipe<NoteInContext>.PipeSource outputPipe, MusicXMLDur radius) {
+        this.inputPipe = inputPipe;
+        this.outputPipe = outputPipe;
         this.radius = radius;
-        queue = new ArrayBlockingQueue<>(BUFFER_SIZE);
-        // Create noteProducer thread
-        noteProducer = new Thread(new NoteProducerRunnable(filename));
-        noteProducer.start();
     }
 
-    public NoteInContext getNext() {
-        if (keepGoing) {
-            // Create consumer thread
-            if (streamOver) {
-                return null;
-            } else {
-                Optional<NoteInContext> nextNoteContainer = Optional.empty();
-                try {
-                    nextNoteContainer = queue.take();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+    @Override
+    public void run() {
+        float[] keyScores = new float[24];
+        Node windowCenter = new Node(inputPipe.read());
+        Node windowStart = windowCenter, windowEnd = windowCenter;
+        // the right side of the window shall be three quarters the size of the left side
+        MusicXMLDur rRadius = radius.multiply(new MusicXMLDur(3, 4));
+        Note nextNote = null;
+
+        while (windowCenter != null) {
+            // shrink window from the left
+            while (windowStart.content.getOnsetTime().add(radius).compareTo(windowCenter.content.getOnsetTime()) < 0) {
+                for (int key = 0; key < 12; key++) {
+                    int keyDegree = (windowStart.content.getPitch().getPitchIndex() + 12 - key) % 12;
+                    keyScores[key] -= MAJ_DEGREE_SCORES[keyDegree];
+                    keyScores[key + 12] -= MIN_DEGREE_SCORES[keyDegree];
                 }
-                if (!nextNoteContainer.isPresent()) {
-                    streamOver = true;
-                    try {
-                        noteProducer.join();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    return null;
-                }
-                else {
-                    return nextNoteContainer.get();
+                windowStart = windowStart.next;
+            }
+            // expand window to the right
+            while (windowCenter.content.getOnsetTime().add(rRadius).compareTo(windowEnd.content.getOnsetTime()) > 0) {
+                nextNote = inputPipe.read();
+                if (nextNote == null)
+                    break;
+                windowEnd.next = new Node(nextNote);
+                windowEnd = windowEnd.next;
+                for (int key = 0; key < 12; key++) {
+                    int keyDegree = (windowEnd.content.getPitch().getPitchIndex() + 12 - key) % 12;
+                    keyScores[key] += MAJ_DEGREE_SCORES[keyDegree];
+                    keyScores[key + 12] += MIN_DEGREE_SCORES[keyDegree];
                 }
             }
-        }
-        else return null; // if client asked to stop feed, they get nothing
-    }
-
-    public void close() {
-        keepGoing = false;
-        queue.clear();
-        try {
-            noteProducer.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        queue = null;
-    }
-
-    private class NoteProducerRunnable implements Runnable {
-
-        private String filename;
-
-        public NoteProducerRunnable(String filename) {
-            this.filename = filename;
-        }
-
-        @Override
-        public void run() {
-            float[] keyScores = new float[24];
-            MusicXMLNoteReader noteReader = new MusicXMLNoteReader(filename);
-            Node windowCenter = new Node(noteReader.getNext());
-            Node windowStart = windowCenter, windowEnd = windowCenter;
-            // the right side of the window shall be half the size of the left side
-            MusicXMLDur rRadius = radius.multiply(new MusicXMLDur(3, 4));
-            Note nextNote = null;
-
-            while (windowCenter != null) {
-                // shrink window from the left
-                while (windowStart.content.getOnsetTime().add(radius).compareTo(windowCenter.content.getOnsetTime()) < 0) {
-                    for (int key = 0; key < 12; key++) {
-                        int keyDegree = (windowStart.content.getPitch().getPitchIndex() + 12 - key) % 12;
-                        keyScores[key] -= MAJ_DEGREE_SCORES[keyDegree];
-                        keyScores[key + 12] -= MIN_DEGREE_SCORES[keyDegree];
-                    }
-                    windowStart = windowStart.next;
+            // find key with max score
+            int maxScoreKey = -1;
+            float maxScore = -1.0f;
+            for (int key = 0; key < 24; key++) {
+                if (keyScores[key] > maxScore) {
+                    maxScore = keyScores[key];
+                    maxScoreKey = key;
                 }
-                // expand window to the right
-                while (windowCenter.content.getOnsetTime().add(rRadius).compareTo(windowEnd.content.getOnsetTime()) > 0) {
-                    nextNote = noteReader.getNext();
-                    if (nextNote == null)
-                        break;
-                    windowEnd.next = new Node(nextNote);
-                    windowEnd = windowEnd.next;
-                    for (int key = 0; key < 12; key++) {
-                        int keyDegree = (windowEnd.content.getPitch().getPitchIndex() + 12 - key) % 12;
-                        keyScores[key] += MAJ_DEGREE_SCORES[keyDegree];
-                        keyScores[key + 12] += MIN_DEGREE_SCORES[keyDegree];
-                    }
-                }
-                // find key with max score
-                int maxScoreKey = -1;
-                float maxScore = -1.0f;
-                for (int key = 0; key < 24; key++) {
-                    if (keyScores[key] > maxScore) {
-                        maxScore = keyScores[key];
-                        maxScoreKey = key;
-                    }
-                }
-
-                // associate note with this key
-                try {
-                    queue.put(Optional.of(new NoteInContext(windowCenter.content, maxScoreKey)));
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    System.exit(0);
-                }
-                windowCenter = windowCenter.next;
             }
-            try {
-                queue.put(Optional.empty());
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                System.exit(1);
-            }
+
+            // associate note with this key
+            outputPipe.write(new NoteInContext(windowCenter.content, maxScoreKey));
+            windowCenter = windowCenter.next;
         }
+        outputPipe.close();
     }
 
-    private class Node {
+    private static class Node {
         private Note content;
         private Node next;
 
         private Node(Note content) {
             this.content = content;
             this.next = null;
-        }
-    }
-
-    public static void main(String[] args) {
-        String path = "/Users/Nico/Princeton/Thesis/Thesis_project/out/production/Thesis_project/main/res/MusicXML/timewise/example"
-                + args[0] + "_timewise.xml";
-        KeyAnalyzer keyAnalyzer = new KeyAnalyzer(path, new MusicXMLDur(8, 1));
-
-        NoteInContext note;
-        while((note = keyAnalyzer.getNext()) != null) {
-            System.out.println(note);
         }
     }
 }
