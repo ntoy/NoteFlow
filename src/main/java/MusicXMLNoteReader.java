@@ -19,12 +19,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
-public class MusicMXLNoteReader implements Runnable {
+public class MusicXMLNoteReader implements Runnable {
 
     private File inputFile;
     private Pipe<Note>.PipeSource outputPipe;
 
-    public MusicMXLNoteReader(File inputFile, Pipe<Note>.PipeSource outputPipe) {
+    public MusicXMLNoteReader(File inputFile, Pipe<Note>.PipeSource outputPipe) {
         this.inputFile = inputFile;
         this.outputPipe = outputPipe;
     }
