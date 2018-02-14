@@ -2,15 +2,15 @@ package main.java;
 
 import org.apache.commons.math3.fraction.Fraction;
 
-public class MusicXMLDur implements Comparable<MusicXMLDur> {
+public class Duration implements Comparable<Duration> {
 
     private Fraction value;
 
-    public MusicXMLDur(Fraction value) {
+    public Duration(Fraction value) {
         this.value = value;
     }
 
-    public MusicXMLDur(int numer, int denom) {
+    public Duration(int numer, int denom) {
         this.value = new Fraction(numer, denom);
     }
 
@@ -18,12 +18,12 @@ public class MusicXMLDur implements Comparable<MusicXMLDur> {
         return value;
     }
 
-    public MusicXMLDur add(MusicXMLDur that) {
-        return new MusicXMLDur(this.value.add(that.value));
+    public Duration add(Duration that) {
+        return new Duration(this.value.add(that.value));
     }
 
-    public MusicXMLDur multiply(MusicXMLDur that) {
-        return new MusicXMLDur(value.multiply(that.value));
+    public Duration multiply(Duration that) {
+        return new Duration(value.multiply(that.value));
     }
 
     @Override
@@ -32,7 +32,7 @@ public class MusicXMLDur implements Comparable<MusicXMLDur> {
     }
 
     @Override
-    public int compareTo(MusicXMLDur that) {
+    public int compareTo(Duration that) {
         return this.value.compareTo(that.value);
     }
 }

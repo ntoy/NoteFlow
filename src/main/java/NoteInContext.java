@@ -34,8 +34,8 @@ public class NoteInContext {
     }
 
     public static void main(String[] args) {
-        Note note = new Note(new Pitch(60), new MusicXMLAbsTime(2, 1, 4),
-                new MusicXMLDur(1, 4), 1);
+        Note note = new Note(new Pitch(60), new AbsoluteTime(2, 1, 4),
+                new Duration(1, 4), 1);
         System.out.println(new NoteInContext(note, 3));
         System.out.println(new NoteInContext(note, 15));
     }

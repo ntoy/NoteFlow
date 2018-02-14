@@ -3,12 +3,12 @@ package main.java;
 public class Note {
 
     private Pitch pitch;
-    private MusicXMLAbsTime onsetTime;
-    private MusicXMLDur duration;
+    private AbsoluteTime onsetTime;
+    private Duration duration;
 
     private int voice;
 
-    public Note(Pitch pitch, MusicXMLAbsTime onsetTime, MusicXMLDur duration, int voice) {
+    public Note(Pitch pitch, AbsoluteTime onsetTime, Duration duration, int voice) {
         this.pitch = pitch;
         this.onsetTime = onsetTime;
         this.duration = duration;
@@ -19,11 +19,11 @@ public class Note {
         return pitch;
     }
 
-    public MusicXMLAbsTime getOnsetTime() {
+    public AbsoluteTime getOnsetTime() {
         return onsetTime;
     }
 
-    public MusicXMLDur getDuration() {
+    public Duration getDuration() {
         return duration;
     }
 
@@ -35,11 +35,11 @@ public class Note {
         this.pitch = pitch;
     }
 
-    public void setOnsetTime(MusicXMLAbsTime onsetTime) {
+    public void setOnsetTime(AbsoluteTime onsetTime) {
         this.onsetTime = onsetTime;
     }
 
-    public void setDuration(MusicXMLDur duration) {
+    public void setDuration(Duration duration) {
         this.duration = duration;
     }
 

@@ -4,7 +4,7 @@ public class KeyAnalyzer implements Runnable {
 
     private Pipe<Note>.PipeSink inputPipe;
     private Pipe<NoteInContext>.PipeSource outputPipe;
-    private MusicXMLDur radius;
+    private Duration radius;
 
     private static final int BUFFER_SIZE = 32;
     // Major: tonic1.0 dominant0.8 leading0.6 mediant0.6 subdom0.4 submed0.4 supertonic0.2 4#0.1 7b0.05 5#0.05
@@ -14,7 +14,7 @@ public class KeyAnalyzer implements Runnable {
     private static final double[] MIN_DEGREE_SCORES =
             {1.0f, 0.0f, 0.2f, 0.6f, 0.0f, 0.4f, 0.1f, 0.8f, 0.4f, 0.0f, 0.4f, 0.6f};
 
-    public KeyAnalyzer(Pipe<Note>.PipeSink inputPipe, Pipe<NoteInContext>.PipeSource outputPipe, MusicXMLDur radius) {
+    public KeyAnalyzer(Pipe<Note>.PipeSink inputPipe, Pipe<NoteInContext>.PipeSource outputPipe, Duration radius) {
         this.inputPipe = inputPipe;
         this.outputPipe = outputPipe;
         this.radius = radius;
@@ -26,7 +26,7 @@ public class KeyAnalyzer implements Runnable {
         Node windowCenter = new Node(inputPipe.read());
         Node windowStart = windowCenter, windowEnd = windowCenter;
         // the right side of the window shall be three quarters the size of the left side
-        MusicXMLDur rRadius = radius.multiply(new MusicXMLDur(3, 4));
+        Duration rRadius = radius.multiply(new Duration(3, 4));
         Note nextNote = null;
 
         while (windowCenter != null) {

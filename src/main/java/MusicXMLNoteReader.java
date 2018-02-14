@@ -37,7 +37,7 @@ public class MusicXMLNoteReader implements Runnable {
         CompareByOnsetTime compareByOnsetTime = new CompareByOnsetTime();
 
         // start at time zero
-        MusicXMLAbsTime curTime = new MusicXMLAbsTime(0, 0, 1);
+        AbsoluteTime curTime = new AbsoluteTime(0, 0, 1);
 
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = null;
@@ -144,7 +144,7 @@ public class MusicXMLNoteReader implements Runnable {
                             System.exit(1);
                         }
 
-                        MusicXMLDur duration = new MusicXMLDur(Integer.parseInt(durationElement.getTextContent()),
+                        Duration duration = new Duration(Integer.parseInt(durationElement.getTextContent()),
                                 divisions);
 
                         // if this is not a rest
@@ -176,7 +176,7 @@ public class MusicXMLNoteReader implements Runnable {
                             System.exit(1);
                         }
                         int backupDur = Integer.parseInt(backupDurElement.getTextContent());
-                        curTime = curTime.add(new MusicXMLDur(-backupDur, divisions));
+                        curTime = curTime.add(new Duration(-backupDur, divisions));
                     }
                 }
             }
