@@ -18,6 +18,9 @@ public class Pipe<T> {
     }
 
     public class PipeSource {
+        // cannot be instantiated directly
+        private PipeSource() {}
+
         public void write(T e){
             try {
                 queue.put(Optional.of(e));
@@ -36,6 +39,9 @@ public class Pipe<T> {
     }
 
     public class PipeSink {
+        // cannot be instantiated directly
+        private PipeSink() {}
+
         public T read(){
             if (closed) return null;
             Optional<T> optional = null;
