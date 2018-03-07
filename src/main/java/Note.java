@@ -17,6 +17,14 @@ public class Note {
         this.voice = voice;
     }
 
+    public Note(Note that) {
+        this.pitch = that.pitch;
+        this.onsetTime = that.onsetTime;
+        this.duration = that.duration;
+        this.timeSig = that.timeSig;
+        this.voice = that.voice;
+    }
+
     public Pitch getPitch() {
         return pitch;
     }

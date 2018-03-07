@@ -1,22 +1,17 @@
 package main.java;
 
-public class NoteInContext {
-    private Note note;
-    // key < 12 is major, key >= 12 is (key - 12) minor
+
+/**
+ * A note paired with the musical key of the section it lies in.
+ * The key is represented as an integer between 0 and 23.
+ * 0-11 represent C Major - B Major, 12-23 represent C minor - B minor.
+ */
+public class NoteInContext extends Note {
     private int key;
 
-    // a non-mutation-safe constructor
     public NoteInContext(Note note, int key) {
-        this.note = note;
+        super(note);
         this.key = key;
-    }
-
-    public Note getNote() {
-        return note;
-    }
-
-    public void setNote(Note note) {
-        this.note = note;
     }
 
     public int getKey() {
@@ -29,7 +24,7 @@ public class NoteInContext {
 
     @Override
     public String toString() {
-        return note.toString() + " in " + new Pitch(0, key, 0).getPitchNameSharp()
+        return super.toString() + " in " + new Pitch(0, key, 0).getPitchNameSharp()
                 + (key < 12 ? " major" : " minor");
     }
 
