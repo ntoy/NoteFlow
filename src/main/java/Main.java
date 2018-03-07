@@ -14,7 +14,7 @@ public class Main {
         Thread musicMXLNoteReader = new Thread(new MusicXMLNoteReader(inputFile, notePipe.source));
         Pipe<NoteInContext> noteInContextPipe = new Pipe<>(16);
         Thread keyAnalyzer = new Thread(new KeyAnalyzer(notePipe.sink, noteInContextPipe.source,
-                new Duration(8, 1)));
+                new Duration(2, 1)));
         Thread printer = new Thread(new Printer(noteInContextPipe.sink));
 
         musicMXLNoteReader.start();
