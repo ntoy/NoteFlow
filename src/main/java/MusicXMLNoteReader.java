@@ -33,7 +33,7 @@ public class MusicXMLNoteReader implements Runnable {
     @Override
     public void run() {
         // TODO: handle tied notes (extra complication for those that go over a barline)
-        // TODO: handle time sig changes (currently assuming constan time sig)
+        // TODO: handle time sig changes (currently assuming constant time sig)
 
         int divisions = 0;
         TimeSig timeSig = null;
@@ -150,6 +150,8 @@ public class MusicXMLNoteReader implements Runnable {
                     timeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
                             Integer.parseInt(timeSigBeatTypeNode.getTextContent()));
                 }
+                if (timeSig != null)
+                    throw new IllegalStateException("No time signature found");
 
 //                if (timeChange) {
 //                    durCheckpoints.add(new Pair<>(curTimeInDivs, curTime));
@@ -210,7 +212,7 @@ public class MusicXMLNoteReader implements Runnable {
                             }
                             Pitch pitch = new Pitch(pitchOctave, pitchStep, alter);
                             int voice = Integer.parseInt(voiceElement.getTextContent());
-                            Note note = new Note(pitch, curTime, duration, voice);
+                            Note note = new Note(pitch, curTime, duration, timeSig, voice);
                             notes.add(note);
                         }
 
