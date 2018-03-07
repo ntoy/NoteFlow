@@ -1,5 +1,6 @@
 package main.java;
 
+import org.javatuples.Pair;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -31,12 +32,23 @@ public class MusicXMLNoteReader implements Runnable {
 
     @Override
     public void run() {
+        // TODO: handle tied notes (extra complication for those that go over a barline)
+        // TODO: handle time sig changes (currently assuming constan time sig)
+
         int divisions = 0;
+        TimeSig timeSig = null;
+
+        // says whether time sig or number of divisions per quarter note has changed
+//        boolean timeChange = false;
+
+        // list of measure-relative dur/dur in divisions correspondences at each time change
+//        ArrayList<Pair<Integer, AbsoluteTime>> durCheckpoints = new ArrayList<>();
 
         CompareByVoice compareByVoice = new CompareByVoice();
         CompareByOnsetTime compareByOnsetTime = new CompareByOnsetTime();
 
         // start at time zero
+//        int curTimeInDivs = 0;
         AbsoluteTime curTime = new AbsoluteTime(0, 0, 1);
 
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -93,6 +105,8 @@ public class MusicXMLNoteReader implements Runnable {
                 Node partNode = partList.item(j);
 
                 Element divisionsNode = null;
+                Element timeSigBeatsNode= null;
+                Element timeSigBeatTypeNode = null;
 
                 // get number of divisions in part in measure
                 try {
@@ -102,8 +116,45 @@ public class MusicXMLNoteReader implements Runnable {
                     e.printStackTrace();
                     System.exit(1);
                 }
-                if (divisionsNode != null)
+                if (divisionsNode != null) {
+//                    int newDivisions = Integer.parseInt(divisionsNode.getTextContent());
+//                    if (newDivisions != divisions) {
+//                        timeChange = true;
+//                        divisions = newDivisions;
+//                    }
                     divisions = Integer.parseInt(divisionsNode.getTextContent());
+                }
+
+                // get time signature
+                try {
+                    timeSigBeatsNode = (Element) xPath.compile("./attributes/time/beats").evaluate(
+                            partNode, XPathConstants.NODE);
+                } catch (XPathExpressionException e) {
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+                try {
+                    timeSigBeatTypeNode = (Element) xPath.compile("./attributes/time/beat-type").evaluate(
+                            partNode, XPathConstants.NODE);
+                } catch (XPathExpressionException e) {
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+                if (timeSigBeatsNode != null && timeSigBeatTypeNode != null) {
+//                    TimeSig newTimeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
+//                            Integer.parseInt(timeSigBeatTypeNode.getTextContent()));
+//                    if (!newTimeSig.equals(timeSig)) {
+//                        timeChange = true;
+//                        timeSig = newTimeSig;
+//                    }
+                    timeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
+                            Integer.parseInt(timeSigBeatTypeNode.getTextContent()));
+                }
+
+//                if (timeChange) {
+//                    durCheckpoints.add(new Pair<>(curTimeInDivs, curTime));
+//                    timeChange = false;
+//                }
 
                 // get list of notes in part in measure
                 NodeList noteBackupList = null;
@@ -144,8 +195,9 @@ public class MusicXMLNoteReader implements Runnable {
                             System.exit(1);
                         }
 
-                        Duration duration = new Duration(Integer.parseInt(durationElement.getTextContent()),
-                                divisions);
+                        int durInDivs = Integer.parseInt(durationElement.getTextContent());
+                        Duration duration = new Duration(durInDivs * timeSig.getBeatType(),
+                                4 * divisions * timeSig.getBeats());
 
                         // if this is not a rest
                         if (restElement == null) {
@@ -175,8 +227,9 @@ public class MusicXMLNoteReader implements Runnable {
                             e.printStackTrace();
                             System.exit(1);
                         }
-                        int backupDur = Integer.parseInt(backupDurElement.getTextContent());
-                        curTime = curTime.add(new Duration(-backupDur, divisions));
+                        int backupDurInDivs = Integer.parseInt(backupDurElement.getTextContent());
+                        curTime = curTime.add(new Duration(-backupDurInDivs * timeSig.getBeatType(),
+                                4 * divisions * timeSig.getBeats()));
                     }
                 }
             }
