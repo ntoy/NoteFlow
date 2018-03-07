@@ -5,7 +5,6 @@ public class Note {
     private Pitch pitch;
     private AbsoluteTime onsetTime;
     private Duration duration;
-
     private int voice;
 
     public Note(Pitch pitch, AbsoluteTime onsetTime, Duration duration, int voice) {
@@ -29,22 +28,6 @@ public class Note {
 
     public int getVoice() {
         return voice;
-    }
-
-    public void setPitch(Pitch pitch) {
-        this.pitch = pitch;
-    }
-
-    public void setOnsetTime(AbsoluteTime onsetTime) {
-        this.onsetTime = onsetTime;
-    }
-
-    public void setDuration(Duration duration) {
-        this.duration = duration;
-    }
-
-    public void setVoice(int voice) {
-        this.voice = voice;
     }
 
     @Override
