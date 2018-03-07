@@ -9,48 +9,48 @@ import org.apache.commons.math3.fraction.Fraction;
 public class AbsoluteTime implements Comparable<AbsoluteTime> {
 
     // Assumption made: piece is always at same tempo
-    private int quarterNoteOffset;
-    private Fraction quarterNoteFrac;
+    private int measureOffset;
+    private Fraction measureFrac;
 
-    public AbsoluteTime(int quarterNoteOffset, Fraction quarterNoteFrac) {
-        int wholePartChange = quarterNoteFrac.intValue();
+    public AbsoluteTime(int measureOffset, Fraction measureFrac) {
+        int wholePartChange = measureFrac.intValue();
         // floor of real number = integer value if positive or whole, o/w integer value - 1
-        if (quarterNoteFrac.getNumerator() * quarterNoteFrac.getDenominator() < 0
-                && quarterNoteFrac.getNumerator() % quarterNoteFrac.getDenominator() != 0)
+        if (measureFrac.getNumerator() * measureFrac.getDenominator() < 0
+                && measureFrac.getNumerator() % measureFrac.getDenominator() != 0)
             wholePartChange--;
-        this.quarterNoteOffset = quarterNoteOffset + wholePartChange;
-        this.quarterNoteFrac = quarterNoteFrac.subtract(wholePartChange);
+        this.measureOffset = measureOffset + wholePartChange;
+        this.measureFrac = measureFrac.subtract(wholePartChange);
     }
 
-    public AbsoluteTime(int quarterNoteOffset, int numer, int denom) {
-        this(quarterNoteOffset, new Fraction(numer, denom));
+    public AbsoluteTime(int measureOffset, int numer, int denom) {
+        this(measureOffset, new Fraction(numer, denom));
     }
 
-    public int getQuarterNoteOffset() {
-        return quarterNoteOffset;
+    public int getMeasureOffset() {
+        return measureOffset;
     }
 
-    public Fraction getQuarterNoteFrac() {
-        return quarterNoteFrac;
+    public Fraction getMeasureFrac() {
+        return measureFrac;
     }
 
     public AbsoluteTime add(Duration duration) {
-        return new AbsoluteTime(quarterNoteOffset, quarterNoteFrac.add(duration.getValue()));
+        return new AbsoluteTime(measureOffset, measureFrac.add(duration.getValue()));
     }
 
     @Override
     public String toString() {
-        return "[time:" + quarterNoteOffset + " + " + quarterNoteFrac + "]";
+        return "[time:" + measureOffset + " + " + measureFrac + "]";
     }
 
     // compare with lexicographical order
     @Override
     public int compareTo(AbsoluteTime that) {
         // invariant assumed: fractional parts are always less than one
-        if (this.quarterNoteOffset != that.quarterNoteOffset)
-            return this.quarterNoteOffset - that.quarterNoteOffset;
+        if (this.measureOffset != that.measureOffset)
+            return this.measureOffset - that.measureOffset;
         else
-            return this.quarterNoteFrac.compareTo(that.quarterNoteFrac);
+            return this.measureFrac.compareTo(that.measureFrac);
     }
 
     // Unit testing
@@ -62,20 +62,20 @@ public class AbsoluteTime implements Comparable<AbsoluteTime> {
 
         absTime = new AbsoluteTime(3, 1, 6);
         dur = new Duration(1, 2);
-        offset = absTime.add(dur).getQuarterNoteOffset();
-        frac = absTime.add(dur).getQuarterNoteFrac();
+        offset = absTime.add(dur).getMeasureOffset();
+        frac = absTime.add(dur).getMeasureFrac();
         System.out.println(offset + ", " + frac);
 
         absTime = new AbsoluteTime(3, 5, 6);
         dur = new Duration(11, 6);
-        offset = absTime.add(dur).getQuarterNoteOffset();
-        frac = absTime.add(dur).getQuarterNoteFrac();
+        offset = absTime.add(dur).getMeasureOffset();
+        frac = absTime.add(dur).getMeasureFrac();
         System.out.println(offset + ", " + frac);
 
         absTime = new AbsoluteTime(3, 1, 6);
         dur = new Duration(-11, 6);
-        offset = absTime.add(dur).getQuarterNoteOffset();
-        frac = absTime.add(dur).getQuarterNoteFrac();
+        offset = absTime.add(dur).getMeasureOffset();
+        frac = absTime.add(dur).getMeasureFrac();
         System.out.println(offset + ", " + frac);
     }
 }
