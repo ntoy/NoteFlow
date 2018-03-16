@@ -26,6 +26,11 @@ public class AbsoluteTime implements Comparable<AbsoluteTime> {
         this(measureOffset, new Fraction(numer, denom));
     }
 
+    public AbsoluteTime(AbsoluteTime that) {
+        this.measureOffset = that.measureOffset;
+        this.measureFrac = that.measureFrac;
+    }
+
     public int getMeasureOffset() {
         return measureOffset;
     }
