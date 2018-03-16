@@ -46,6 +46,14 @@ public class HierarchicalRelTime extends AbsoluteTime {
         increment = treeNotationIntValue(treeNotationDiff(curTruncated, ceilingTruncated, basisTruncated), basisTruncated);
     }
 
+    public int getLevel() {
+        return level;
+    }
+
+    public int getIncrement() {
+        return increment;
+    }
+
     private static int[] treeNotation(AbsoluteTime time, byte[] basis) {
         int[] treeNotation = new int[basis.length + 1];
         treeNotation[0] = time.getMeasureOffset();
