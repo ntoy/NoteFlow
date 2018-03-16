@@ -3,7 +3,7 @@ package main.java;
 public class KeyAnalyzer implements Runnable {
 
     private Pipe<Note>.PipeSink inputPipe;
-    private Pipe<NoteInContext>.PipeSource outputPipe;
+    private Pipe<NoteInKey>.PipeSource outputPipe;
     private Duration radius;
 
     private static final int BUFFER_SIZE = 32;
@@ -14,7 +14,7 @@ public class KeyAnalyzer implements Runnable {
     private static final double[] MIN_DEGREE_SCORES =
             {1.0f, 0.0f, 0.2f, 0.6f, 0.0f, 0.4f, 0.1f, 0.8f, 0.4f, 0.0f, 0.4f, 0.6f};
 
-    public KeyAnalyzer(Pipe<Note>.PipeSink inputPipe, Pipe<NoteInContext>.PipeSource outputPipe, Duration radius) {
+    public KeyAnalyzer(Pipe<Note>.PipeSink inputPipe, Pipe<NoteInKey>.PipeSource outputPipe, Duration radius) {
         this.inputPipe = inputPipe;
         this.outputPipe = outputPipe;
         this.radius = radius;
@@ -63,7 +63,7 @@ public class KeyAnalyzer implements Runnable {
             }
 
             // associate note with this key
-            outputPipe.write(new NoteInContext(windowCenter.content, maxScoreKey));
+            outputPipe.write(new NoteInKey(windowCenter.content, maxScoreKey));
             windowCenter = windowCenter.next;
         }
         outputPipe.close();
