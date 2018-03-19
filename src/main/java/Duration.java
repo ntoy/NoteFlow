@@ -14,6 +14,10 @@ public class Duration implements Comparable<Duration> {
         this.value = new Fraction(numer, denom);
     }
 
+    public Duration(Duration that) {
+        this.value = that.value;
+    }
+
     public Fraction getValue() {
         return value;
     }
