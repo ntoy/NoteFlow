@@ -5,8 +5,8 @@ import org.apache.commons.math3.fraction.Fraction;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import static main.java.DebugUtil.byteArrayToString;
-import static main.java.DebugUtil.intArrayToString;
+import static main.java.PrintUtil.byteArrayToString;
+import static main.java.PrintUtil.intArrayToString;
 
 public class HierarchicalRelTime extends AbsoluteTime {
     private int level;
