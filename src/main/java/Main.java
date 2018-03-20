@@ -11,14 +11,18 @@ public class Main {
 
         File inputFile = new File(args[0]);
         Pipe<Note> notePipe = new Pipe<>(16);
+        Pipe<NoteInKey> noteInKeyPipe = new Pipe<>(16);
+        Pipe<SmartNote> smartNotePipe = new Pipe<>(16);
+
         Thread musicMXLNoteReader = new Thread(new MusicXMLNoteReader(inputFile, notePipe.source));
-        Pipe<NoteInKey> noteInContextPipe = new Pipe<>(16);
-        Thread keyAnalyzer = new Thread(new KeyAnalyzer(notePipe.sink, noteInContextPipe.source,
+        Thread keyAnalyzer = new Thread(new KeyAnalyzer(notePipe.sink, noteInKeyPipe.source,
                 new Duration(2, 1)));
-        Thread printer = new Thread(new Printer(noteInContextPipe.sink));
+        Thread metricalConverter = new Thread(new MetricalConverter(noteInKeyPipe.sink, smartNotePipe.source));
+        Thread smartNotePrinter = new Thread(new SmartNotePrinter(smartNotePipe.sink));
 
         musicMXLNoteReader.start();
         keyAnalyzer.start();
-        printer.start();
+        metricalConverter.start();
+        smartNotePrinter.start();
     }
 }

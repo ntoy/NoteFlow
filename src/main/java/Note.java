@@ -3,8 +3,8 @@ package main.java;
 public class Note {
 
     private Pitch pitch;
-    private AbsoluteTime onsetTime;
-    private Duration duration;
+    protected AbsoluteTime onsetTime;
+    protected Duration duration;
     private TimeSig timeSig;
     private int voice;
 

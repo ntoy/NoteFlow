@@ -14,6 +14,11 @@ public class NoteInKey extends Note {
         this.key = key;
     }
 
+    public NoteInKey(NoteInKey that) {
+        super(that);
+        this.key = that.key;
+    }
+
     public int getKey() {
         return key;
     }

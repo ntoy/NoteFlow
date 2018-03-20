@@ -54,7 +54,7 @@ public class HierarchicalRelTime extends AbsoluteTime {
         return increment;
     }
 
-    private static int[] treeNotation(AbsoluteTime time, byte[] basis) {
+    static int[] treeNotation(AbsoluteTime time, byte[] basis) {
         int[] treeNotation = new int[basis.length + 1];
         treeNotation[0] = time.getMeasureOffset();
         Fraction remainingFrac = time.getMeasureFrac();
@@ -73,7 +73,7 @@ public class HierarchicalRelTime extends AbsoluteTime {
         return treeNotation;
     }
 
-    private static int[] treeNotationDiff(int[] a, int[] b, byte[] basis) {
+    static int[] treeNotationDiff(int[] a, int[] b, byte[] basis) {
         assert a.length == basis.length + 1;
         assert b.length == a.length;
         int[] result = new int[a.length];
@@ -100,7 +100,7 @@ public class HierarchicalRelTime extends AbsoluteTime {
         return result;
     }
 
-    private static int[] treeNotationSum(int[] a, int[] b, byte[] basis) {
+    static int[] treeNotationSum(int[] a, int[] b, byte[] basis) {
         assert a.length == basis.length + 1;
         assert b.length == a.length;
 
@@ -117,7 +117,7 @@ public class HierarchicalRelTime extends AbsoluteTime {
         return result;
     }
 
-    private static int treeNotationIntValue(int[] treeNotation, byte[] basis) {
+    static int treeNotationIntValue(int[] treeNotation, byte[] basis) {
         assert treeNotation.length == basis.length + 1;
         int result = treeNotation[0];
         for (int i = 1; i < treeNotation.length; i++) {
