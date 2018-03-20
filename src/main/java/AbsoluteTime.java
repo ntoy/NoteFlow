@@ -8,6 +8,8 @@ import org.apache.commons.math3.fraction.Fraction;
  */
 public class AbsoluteTime implements Comparable<AbsoluteTime> {
 
+    public static AbsoluteTime ZERO = new AbsoluteTime(0, 0, 1);
+
     // Assumption made: piece is always at same tempo
     private int measureOffset;
     private Fraction measureFrac;

@@ -49,7 +49,7 @@ public class MusicXMLNoteReader implements Runnable {
 
         // start at time zero
 //        int curTimeInDivs = 0;
-        AbsoluteTime curTime = new AbsoluteTime(0, 0, 1);
+        AbsoluteTime curTime = AbsoluteTime.ZERO;
 
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = null;
