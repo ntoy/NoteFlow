@@ -150,7 +150,7 @@ public class MusicXMLNoteReader implements Runnable {
                     timeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
                             Integer.parseInt(timeSigBeatTypeNode.getTextContent()));
                 }
-                if (timeSig != null)
+                if (timeSig == null)
                     throw new IllegalStateException("No time signature found");
 
 //                if (timeChange) {
