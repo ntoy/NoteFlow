@@ -57,6 +57,14 @@ public class Pitch {
     }
 
     @Override
+    public boolean equals(Object that) {
+        if (that == this) return true;
+        if (!(that instanceof Pitch)) return false;
+        Pitch thatPitch = (Pitch) that;
+        return thatPitch.midiIndex == this.midiIndex;
+    }
+
+    @Override
     public String toString() {
         return getPitchNameSharp() + getOctave();
     }
@@ -66,12 +74,15 @@ public class Pitch {
         return x >= 0 ? x : x + b;
     }
 
-
     public static void main(String args[]) {
         Pitch pitch = new Pitch(61);
         System.out.println(pitch.getOctave());
         System.out.println(pitch.getPitchIndex());
         System.out.println(pitch.getPitchNameFlat());
         System.out.println(pitch.getPitchNameSharp());
+        System.out.println(pitch.equals("hello"));
+        System.out.println(pitch.equals(new Pitch(60)));
+        System.out.println(pitch.equals(new Pitch(61)));
+        System.out.println(pitch.equals(pitch));
     }
 }

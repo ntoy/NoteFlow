@@ -22,6 +22,8 @@ import java.util.Comparator;
 
 public class MusicXMLNoteReader implements Runnable {
 
+    private static final int MAX_VOICES = 8;
+
     private File inputFile;
     private Pipe<Note>.PipeSource outputPipe;
 
@@ -37,6 +39,10 @@ public class MusicXMLNoteReader implements Runnable {
 
         int divisions = 0;
         TimeSig timeSig = null;
+        ArrayList<ArrayList<Note>> outstandingTiesPerVoice = new ArrayList<>(MAX_VOICES);
+        for (int i = 0; i < MAX_VOICES; i++) {
+            outstandingTiesPerVoice.add(new ArrayList<>());
+        }
 
         // says whether time sig or number of divisions per quarter note has changed
 //        boolean timeChange = false;
@@ -178,6 +184,7 @@ public class MusicXMLNoteReader implements Runnable {
                         // TODO: optimize by compiling expressions outside of loop
                         Element pitchStepElement = null, pitchOctaveElement = null, pitchAlterElement = null,
                                 durationElement = null, restElement = null, voiceElement = null;
+                        NodeList ties = null;
 
                         try {
                             pitchStepElement = (Element) xPath.compile("./pitch/step")
@@ -192,6 +199,8 @@ public class MusicXMLNoteReader implements Runnable {
                                     .evaluate(noteNode, XPathConstants.NODE);
                             voiceElement = (Element) xPath.compile("./voice")
                                     .evaluate(noteNode, XPathConstants.NODE);
+                            ties = (NodeList) xPath.compile("./tie")
+                                    .evaluate(noteNode, XPathConstants.NODESET);
                         } catch (XPathExpressionException e) {
                             e.printStackTrace();
                             System.exit(1);
@@ -212,8 +221,63 @@ public class MusicXMLNoteReader implements Runnable {
                             }
                             Pitch pitch = new Pitch(pitchOctave, pitchStep, alter);
                             int voice = Integer.parseInt(voiceElement.getTextContent());
-                            Note note = new Note(pitch, curTime, duration, timeSig, voice);
-                            notes.add(note);
+
+                            // handle ties
+                            boolean isTieStart = false, isTieStop = false;
+                            if (ties != null) {
+                                // figure out what types of ties we have (start, stop...)
+                                assert (ties.getLength() == 1 || ties.getLength() == 2);
+                                for (int m = 0; m < ties.getLength(); m++) {
+                                    Element tie = (Element) ties.item(m);
+                                    String tieType = tie.getAttribute("type");
+                                    if (tieType.equals("start"))
+                                        isTieStart = true;
+                                    else if (tieType.equals("stop"))
+                                        isTieStop = true;
+                                    else
+                                        throw new RuntimeException("Illegal tie type");
+                                }
+                            }
+
+                            Note continuedNote = null;
+                            ArrayList<Note> outstandingTies = outstandingTiesPerVoice.get(voice);
+                            int continuedNoteIdx = 0;
+
+                            if (isTieStop && isTieStart) {
+                                // find which note we are continuing
+                                while (!(outstandingTies.get(continuedNoteIdx).getPitch().equals(pitch))) {
+                                    continuedNoteIdx++;
+                                }
+                                if (continuedNoteIdx == outstandingTies.size()) {
+                                    throw new RuntimeException("Found tie stop without corresponding tie start");
+                                }
+
+                                // extend duration of tie chain by that of new note
+                                continuedNote = outstandingTies.get(continuedNoteIdx);
+                                continuedNote.setDuration(continuedNote.getDuration().add(duration));
+                                outstandingTies.set(continuedNoteIdx, continuedNote);
+                            }
+                            else if (isTieStop) {
+                                // find which note we are ending
+                                while (!(outstandingTies.get(continuedNoteIdx).getPitch().equals(pitch))) {
+                                    continuedNoteIdx++;
+                                }
+                                if (continuedNoteIdx == outstandingTies.size()) {
+                                    throw new RuntimeException("Found tie stop without corresponding tie start");
+                                }
+
+                                // extend duration of tie chain by that of new note, and output
+                                continuedNote = outstandingTies.remove(continuedNoteIdx);
+                                continuedNote.setDuration(continuedNote.getDuration().add(duration));
+                                notes.add(continuedNote);
+                            }
+                            else if (isTieStart) {
+                                continuedNote = new Note(pitch, curTime, duration, timeSig, voice);
+                                outstandingTies.add(continuedNote);
+                            }
+                            else {
+                                notes.add(new Note(pitch, curTime, duration, timeSig, voice));
+                            }
                         }
 
                         // advance time by duration of note
@@ -244,6 +308,19 @@ public class MusicXMLNoteReader implements Runnable {
             }
         }
         outputPipe.close();
+    }
+
+    public static void main(String[] args) {
+        MusicXMLPreprocess.preprocessMusicXMLs("main/res/MusicXML/original",
+                "main/res/MusicXML/partwise",
+                "main/res/MusicXML/timewise",
+                "main/res/musicxml30");
+        File inputFile = new File(args[0]);
+        Pipe<Note> notePipe = new Pipe<>(16);
+        Thread musicMXLNoteReader = new Thread(new MusicXMLNoteReader(inputFile, notePipe.source));
+        Thread printer = new Thread(new Printer(notePipe.sink));
+        musicMXLNoteReader.start();
+        printer.start();
     }
 
     private class CompareByVoice implements Comparator<Note> {

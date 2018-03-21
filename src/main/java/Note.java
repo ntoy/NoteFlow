@@ -37,6 +37,10 @@ public class Note {
         return duration;
     }
 
+    public void setDuration(Duration duration) {
+        this.duration = duration;
+    }
+
     public int getVoice() {
         return voice;
     }

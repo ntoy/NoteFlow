@@ -4,6 +4,8 @@ import org.apache.commons.math3.fraction.Fraction;
 
 public class Duration implements Comparable<Duration> {
 
+    public static final Duration ZERO = new Duration(Fraction.ZERO);
+
     private Fraction value;
 
     public Duration(Fraction value) {
