@@ -39,10 +39,14 @@ public class MusicXMLNoteReader implements Runnable {
 
         int divisions = 0;
         TimeSig timeSig = null;
+
+        // invariant: each list in outstandingTiesPerVoice is sorted by onset time
         ArrayList<ArrayList<Note>> outstandingTiesPerVoice = new ArrayList<>(MAX_VOICES);
         for (int i = 0; i < MAX_VOICES; i++) {
             outstandingTiesPerVoice.add(new ArrayList<>());
         }
+
+        DecentArrayList<Note> notesToOutput = new DecentArrayList<>();
 
         // says whether time sig or number of divisions per quarter note has changed
 //        boolean timeChange = false;
@@ -94,7 +98,6 @@ public class MusicXMLNoteReader implements Runnable {
         // iterate over measures
         for (int i = 0; i < measureList.getLength(); i++) {
             Node measureNode = measureList.item(i);
-            ArrayList<Note> notes = new ArrayList<>();
 
             // get list of parts
             NodeList partList = null;
@@ -269,14 +272,14 @@ public class MusicXMLNoteReader implements Runnable {
                                 // extend duration of tie chain by that of new note, and output
                                 continuedNote = outstandingTies.remove(continuedNoteIdx);
                                 continuedNote.setDuration(continuedNote.getDuration().add(duration));
-                                notes.add(continuedNote);
+                                notesToOutput.add(continuedNote);
                             }
                             else if (isTieStart) {
                                 continuedNote = new Note(pitch, curTime, duration, timeSig, voice);
                                 outstandingTies.add(continuedNote);
                             }
                             else {
-                                notes.add(new Note(pitch, curTime, duration, timeSig, voice));
+                                notesToOutput.add(new Note(pitch, curTime, duration, timeSig, voice));
                             }
                         }
 
@@ -300,12 +303,28 @@ public class MusicXMLNoteReader implements Runnable {
                 }
             }
             // lexicographically sort by onset time (major) and voice (minor)
-            Collections.sort(notes, compareByVoice);
-            Collections.sort(notes, compareByOnsetTime);
+            Collections.sort(notesToOutput, compareByVoice);
+            Collections.sort(notesToOutput, compareByOnsetTime);
 
-            for (Note note : notes) {
+            AbsoluteTime oldestOutstandingTieOnset = curTime;
+            for (int v = 0; v < MAX_VOICES; v++) {
+                ArrayList<Note> outstandingTies = outstandingTiesPerVoice.get(v);
+                if (outstandingTies.size() > 0) {
+                    AbsoluteTime oldestForThisVoice = outstandingTies.get(0).getOnsetTime();
+                    if (oldestForThisVoice.compareTo(oldestOutstandingTieOnset) < 0) {
+                        oldestOutstandingTieOnset = oldestForThisVoice;
+                    }
+                }
+            }
+
+            int n;
+            for (n = 0; n < notesToOutput.size(); n++) {
+                Note note = notesToOutput.get(n);
+                if (note.getOnsetTime().compareTo(oldestOutstandingTieOnset) >= 0)
+                    break;
                 outputPipe.write(note);
             }
+            notesToOutput.removeRange(0, n);
         }
         outputPipe.close();
     }
