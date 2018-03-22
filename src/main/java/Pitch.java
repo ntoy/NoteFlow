@@ -1,6 +1,6 @@
 package main.java;
 
-public class Pitch {
+public class Pitch implements Comparable<Pitch> {
     private int midiIndex;
 
     private static String noteNames = "CDEFGAB";
@@ -54,6 +54,11 @@ public class Pitch {
         }
         String name = noteNames.substring(argmin, argmin + 1);
         return minNumFlats  == 0 ? name : name + "b";
+    }
+
+    @Override
+    public int compareTo(Pitch that) {
+        return this.midiIndex - that.midiIndex;
     }
 
     @Override

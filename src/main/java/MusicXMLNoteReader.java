@@ -20,6 +20,7 @@ public class MusicXMLNoteReader implements Runnable {
 
     private static final int MAX_VOICES = 8;
     private static final Comparator<Note> compareByVoice = Comparator.comparingInt(Note::getVoice);
+    private static final Comparator<Note> compareByPitch = Comparator.comparing(Note::getPitch);
     private static final Comparator<Note> compareByOnsetTime = Comparator.comparing(Note::getOnsetTime);
     private static final XPath xPath = XPathFactory.newInstance().newXPath();
 
@@ -193,7 +194,6 @@ public class MusicXMLNoteReader implements Runnable {
                     if (noteOrBackup.getNodeName().equals("note")) {
                         Node noteNode = noteOrBackup;
 
-                        // TODO: optimize by compiling expressions outside of loop
                         Element pitchStepElement = null, pitchOctaveElement = null,
                                 pitchAlterElement = null, durationElement = null,
                                 restElement = null, voiceElement = null,
@@ -316,8 +316,9 @@ public class MusicXMLNoteReader implements Runnable {
                     }
                 }
             }
-            // lexicographically sort by onset time (major) and voice (minor)
+            // lexicographically sort by (onset time, pitch, voice)
             Collections.sort(notesToOutput, compareByVoice);
+            Collections.sort(notesToOutput, compareByPitch);
             Collections.sort(notesToOutput, compareByOnsetTime);
 
             AbsoluteTime oldestOutstandingTieOnset = curTime.add(prevDur);
