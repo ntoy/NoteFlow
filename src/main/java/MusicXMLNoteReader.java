@@ -1,6 +1,5 @@
 package main.java;
 
-import org.javatuples.Pair;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -34,7 +33,6 @@ public class MusicXMLNoteReader implements Runnable {
 
     @Override
     public void run() {
-        // TODO: handle tied notes (extra complication for those that go over a barline)
         // TODO: handle time sig changes (currently assuming constant time sig)
 
         int divisions = 0;
@@ -47,6 +45,7 @@ public class MusicXMLNoteReader implements Runnable {
         }
 
         DecentArrayList<Note> notesToOutput = new DecentArrayList<>();
+        Duration prevDur = Duration.ZERO; // necessary in case we discover we're in a chord
 
         // says whether time sig or number of divisions per quarter note has changed
 //        boolean timeChange = false;
@@ -186,7 +185,8 @@ public class MusicXMLNoteReader implements Runnable {
 
                         // TODO: optimize by compiling expressions outside of loop
                         Element pitchStepElement = null, pitchOctaveElement = null, pitchAlterElement = null,
-                                durationElement = null, restElement = null, voiceElement = null;
+                                durationElement = null, restElement = null, voiceElement = null,
+                                chordElement = null;
                         NodeList ties = null;
 
                         try {
@@ -202,11 +202,18 @@ public class MusicXMLNoteReader implements Runnable {
                                     .evaluate(noteNode, XPathConstants.NODE);
                             voiceElement = (Element) xPath.compile("./voice")
                                     .evaluate(noteNode, XPathConstants.NODE);
+                            chordElement = (Element) xPath.compile("./chord")
+                                    .evaluate(noteNode, XPathConstants.NODE);
                             ties = (NodeList) xPath.compile("./tie")
                                     .evaluate(noteNode, XPathConstants.NODESET);
                         } catch (XPathExpressionException e) {
                             e.printStackTrace();
                             System.exit(1);
+                        }
+
+                        // only increment time if this note is not on top of the previous
+                        if (chordElement == null) {
+                            curTime = curTime.add(prevDur);
                         }
 
                         int durInDivs = Integer.parseInt(durationElement.getTextContent());
@@ -283,8 +290,7 @@ public class MusicXMLNoteReader implements Runnable {
                             }
                         }
 
-                        // advance time by duration of note
-                        curTime = curTime.add(duration);
+                        prevDur = duration;
                     }
                     else { // if is backup
                         Node backupNode = noteOrBackup;
@@ -306,7 +312,7 @@ public class MusicXMLNoteReader implements Runnable {
             Collections.sort(notesToOutput, compareByVoice);
             Collections.sort(notesToOutput, compareByOnsetTime);
 
-            AbsoluteTime oldestOutstandingTieOnset = curTime;
+            AbsoluteTime oldestOutstandingTieOnset = curTime.add(prevDur);
             for (int v = 0; v < MAX_VOICES; v++) {
                 ArrayList<Note> outstandingTies = outstandingTiesPerVoice.get(v);
                 if (outstandingTies.size() > 0) {
