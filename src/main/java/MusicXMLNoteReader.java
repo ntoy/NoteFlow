@@ -9,10 +9,7 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
+import javax.xml.xpath.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,6 +19,34 @@ import java.util.Comparator;
 public class MusicXMLNoteReader implements Runnable {
 
     private static final int MAX_VOICES = 8;
+    private static final Comparator<Note> compareByVoice = Comparator.comparingInt(Note::getVoice);
+    private static final Comparator<Note> compareByOnsetTime = Comparator.comparing(Note::getOnsetTime);
+    private static final XPath xPath = XPathFactory.newInstance().newXPath();
+
+    private static XPathExpression measureExpr, partExpr, divisionsExpr, beatsExpr, beatTypeExpr,
+    noteBackupExpr, pitchStepExpr, pitchOctaveExpr, pitchAlterExpr, durationExpr, restExpr, voiceExpr,
+    chordExpr, tieExpr;
+
+    static {
+        try {
+            measureExpr = xPath.compile("//measure");
+            partExpr = xPath.compile("./part");
+            divisionsExpr = xPath.compile("./attributes/divisions");
+            beatsExpr = xPath.compile("./attributes/time/beats");
+            beatTypeExpr = xPath.compile("./attributes/time/beat-type");
+            noteBackupExpr = xPath.compile("./note | ./backup");
+            pitchStepExpr = xPath.compile("./pitch/step");
+            pitchOctaveExpr = xPath.compile("./pitch/octave");
+            pitchAlterExpr = xPath.compile("./pitch/alter");
+            durationExpr = xPath.compile("./duration");
+            restExpr = xPath.compile("./rest");
+            voiceExpr = xPath.compile("./voice");
+            chordExpr = xPath.compile("./chord");
+            tieExpr = xPath.compile("./tie");
+        } catch (XPathExpressionException e) {
+            throw new RuntimeException("Failed to compile XPath expressions");
+        }
+    }
 
     private File inputFile;
     private Pipe<Note>.PipeSource outputPipe;
@@ -53,9 +78,6 @@ public class MusicXMLNoteReader implements Runnable {
         // list of measure-relative dur/dur in divisions correspondences at each time change
 //        ArrayList<Pair<Integer, AbsoluteTime>> durCheckpoints = new ArrayList<>();
 
-        CompareByVoice compareByVoice = new CompareByVoice();
-        CompareByOnsetTime compareByOnsetTime = new CompareByOnsetTime();
-
         // start at time zero
 //        int curTimeInDivs = 0;
         AbsoluteTime curTime = AbsoluteTime.ZERO;
@@ -67,6 +89,7 @@ public class MusicXMLNoteReader implements Runnable {
             dBuilder = dbFactory.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
             e.printStackTrace();
+            System.exit(1);
         }
 
         Document doc = null;
@@ -81,17 +104,12 @@ public class MusicXMLNoteReader implements Runnable {
         }
         doc.getDocumentElement().normalize();
 
-        XPath xPath = XPathFactory.newInstance().newXPath();
-
         // get list of measures
-        String expression = "//measure";
         NodeList measureList = null;
         try {
-            measureList = (NodeList) xPath.compile(expression).evaluate(
-                    doc, XPathConstants.NODESET);
+            measureList = (NodeList) measureExpr.evaluate(doc, XPathConstants.NODESET);
         } catch (XPathExpressionException e) {
-            e.printStackTrace();
-            System.exit(1);
+            failEvaluate();
         }
 
         // iterate over measures
@@ -101,11 +119,9 @@ public class MusicXMLNoteReader implements Runnable {
             // get list of parts
             NodeList partList = null;
             try {
-                partList = (NodeList) xPath.compile("./part").evaluate(
-                        measureNode, XPathConstants.NODESET);
+                partList = (NodeList) partExpr.evaluate(measureNode, XPathConstants.NODESET);
             } catch (XPathExpressionException e) {
-                e.printStackTrace();
-                System.exit(1);
+                failEvaluate();
             }
 
             // iterate over parts
@@ -118,11 +134,9 @@ public class MusicXMLNoteReader implements Runnable {
 
                 // get number of divisions in part in measure
                 try {
-                    divisionsNode = (Element) xPath.compile("./attributes/divisions")
-                            .evaluate(partNode, XPathConstants.NODE);
+                    divisionsNode = (Element) divisionsExpr.evaluate(partNode, XPathConstants.NODE);
                 } catch (XPathExpressionException e) {
-                    e.printStackTrace();
-                    System.exit(1);
+                    failEvaluate();
                 }
                 if (divisionsNode != null) {
 //                    int newDivisions = Integer.parseInt(divisionsNode.getTextContent());
@@ -135,18 +149,15 @@ public class MusicXMLNoteReader implements Runnable {
 
                 // get time signature
                 try {
-                    timeSigBeatsNode = (Element) xPath.compile("./attributes/time/beats").evaluate(
-                            partNode, XPathConstants.NODE);
+                    timeSigBeatsNode = (Element) beatsExpr.evaluate(partNode, XPathConstants.NODE);
                 } catch (XPathExpressionException e) {
-                    e.printStackTrace();
-                    System.exit(1);
+                    failEvaluate();
                 }
                 try {
-                    timeSigBeatTypeNode = (Element) xPath.compile("./attributes/time/beat-type").evaluate(
+                    timeSigBeatTypeNode = (Element) beatTypeExpr.evaluate(
                             partNode, XPathConstants.NODE);
                 } catch (XPathExpressionException e) {
-                    e.printStackTrace();
-                    System.exit(1);
+                    failEvaluate();
                 }
                 if (timeSigBeatsNode != null && timeSigBeatTypeNode != null) {
 //                    TimeSig newTimeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
@@ -169,11 +180,10 @@ public class MusicXMLNoteReader implements Runnable {
                 // get list of notes in part in measure
                 NodeList noteBackupList = null;
                 try {
-                    noteBackupList = (NodeList) xPath.compile("./note | ./backup").evaluate(
-                            partNode, XPathConstants.NODESET);
+                    noteBackupList =
+                            (NodeList) noteBackupExpr.evaluate(partNode, XPathConstants.NODESET);
                 } catch (XPathExpressionException e) {
-                    e.printStackTrace();
-                    System.exit(1);
+                    failEvaluate();
                 }
 
                 // iterate over notes/backups in measure
@@ -184,31 +194,30 @@ public class MusicXMLNoteReader implements Runnable {
                         Node noteNode = noteOrBackup;
 
                         // TODO: optimize by compiling expressions outside of loop
-                        Element pitchStepElement = null, pitchOctaveElement = null, pitchAlterElement = null,
-                                durationElement = null, restElement = null, voiceElement = null,
+                        Element pitchStepElement = null, pitchOctaveElement = null,
+                                pitchAlterElement = null, durationElement = null,
+                                restElement = null, voiceElement = null,
                                 chordElement = null;
                         NodeList ties = null;
 
                         try {
-                            pitchStepElement = (Element) xPath.compile("./pitch/step")
-                                    .evaluate(noteNode, XPathConstants.NODE);
-                            pitchOctaveElement = (Element) xPath.compile("./pitch/octave")
-                                    .evaluate(noteNode, XPathConstants.NODE);
-                            pitchAlterElement = (Element) xPath.compile("./pitch/alter")
-                                    .evaluate(noteNode, XPathConstants.NODE);
-                            durationElement = (Element) xPath.compile("./duration")
-                                    .evaluate(noteNode, XPathConstants.NODE);
-                            restElement = (Element) xPath.compile("./rest")
-                                    .evaluate(noteNode, XPathConstants.NODE);
-                            voiceElement = (Element) xPath.compile("./voice")
-                                    .evaluate(noteNode, XPathConstants.NODE);
-                            chordElement = (Element) xPath.compile("./chord")
-                                    .evaluate(noteNode, XPathConstants.NODE);
-                            ties = (NodeList) xPath.compile("./tie")
-                                    .evaluate(noteNode, XPathConstants.NODESET);
+                            pitchStepElement = (Element)
+                                    pitchStepExpr.evaluate(noteNode, XPathConstants.NODE);
+                            pitchOctaveElement = (Element)
+                                    pitchOctaveExpr.evaluate(noteNode, XPathConstants.NODE);
+                            pitchAlterElement = (Element)
+                                    pitchAlterExpr.evaluate(noteNode, XPathConstants.NODE);
+                            durationElement = (Element)
+                                    durationExpr.evaluate(noteNode, XPathConstants.NODE);
+                            restElement = (Element)
+                                    restExpr.evaluate(noteNode, XPathConstants.NODE);
+                            voiceElement = (Element)
+                                    voiceExpr.evaluate(noteNode, XPathConstants.NODE);
+                            chordElement = (Element)
+                                    chordExpr.evaluate(noteNode, XPathConstants.NODE);
+                            ties = (NodeList) tieExpr.evaluate(noteNode, XPathConstants.NODESET);
                         } catch (XPathExpressionException e) {
-                            e.printStackTrace();
-                            System.exit(1);
+                            failEvaluate();
                         }
 
                         // only increment time if this note is not on top of the previous
@@ -296,11 +305,10 @@ public class MusicXMLNoteReader implements Runnable {
                         Node backupNode = noteOrBackup;
                         Element backupDurElement = null;
                         try {
-                            backupDurElement = (Element) xPath.compile("./duration")
-                                    .evaluate(backupNode, XPathConstants.NODE);
+                            backupDurElement = (Element)
+                                    durationExpr.evaluate(backupNode, XPathConstants.NODE);
                         } catch (XPathExpressionException e) {
-                            e.printStackTrace();
-                            System.exit(1);
+                            failEvaluate();
                         }
                         int backupDurInDivs = Integer.parseInt(backupDurElement.getTextContent());
                         curTime = curTime.add(new Duration(-backupDurInDivs * timeSig.getBeatType(),
@@ -335,6 +343,10 @@ public class MusicXMLNoteReader implements Runnable {
         outputPipe.close();
     }
 
+    private static void failEvaluate() {
+        throw new RuntimeException("Failed to evaluate XPath expression");
+    }
+
     public static void main(String[] args) {
         MusicXMLPreprocess.preprocessMusicXMLs("main/res/MusicXML/original",
                 "main/res/MusicXML/partwise",
@@ -346,19 +358,5 @@ public class MusicXMLNoteReader implements Runnable {
         Thread printer = new Thread(new Printer(notePipe.sink));
         musicMXLNoteReader.start();
         printer.start();
-    }
-
-    private class CompareByVoice implements Comparator<Note> {
-        @Override
-        public int compare(Note o1, Note o2) {
-            return o1.getVoice() - o2.getVoice();
-        }
-    }
-
-    private class CompareByOnsetTime implements Comparator<Note> {
-        @Override
-        public int compare(Note o1, Note o2) {
-            return o1.getOnsetTime().compareTo(o2.getOnsetTime());
-        }
     }
 }
