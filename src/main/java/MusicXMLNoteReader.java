@@ -60,6 +60,8 @@ public class MusicXMLNoteReader implements Runnable {
     @Override
     public void run() {
         // TODO: handle time sig changes (currently assuming constant time sig)
+        // TODO: handle triplets and general tuplets (view as short-term time sig change)
+        // TODO: handle pickups
 
         int divisions = 0;
         TimeSig timeSig = null;
@@ -167,8 +169,16 @@ public class MusicXMLNoteReader implements Runnable {
 //                        timeChange = true;
 //                        timeSig = newTimeSig;
 //                    }
+                    boolean timeSigChange = (timeSig != null);
                     timeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
                             Integer.parseInt(timeSigBeatTypeNode.getTextContent()));
+                    if (timeSigChange) {
+                        // force-close all outstanding ties
+                        for (ArrayList<Note> outstandingTies : outstandingTiesPerVoice) {
+                            notesToOutput.addAll(outstandingTies);
+                            outstandingTies.clear();
+                        }
+                    }
                 }
                 if (timeSig == null)
                     throw new IllegalStateException("No time signature found");
@@ -264,31 +274,40 @@ public class MusicXMLNoteReader implements Runnable {
 
                             if (isTieStop && isTieStart) {
                                 // find which note we are continuing
-                                while (!(outstandingTies.get(continuedNoteIdx).getPitch().equals(pitch))) {
+                                while (continuedNoteIdx < outstandingTies.size() &&
+                                        !(outstandingTies.get(continuedNoteIdx).getPitch().equals(pitch))) {
                                     continuedNoteIdx++;
                                 }
                                 if (continuedNoteIdx == outstandingTies.size()) {
-                                    throw new RuntimeException("Found tie stop without corresponding tie start");
+                                    // tie must have been cut short cause of time sig change
+                                    // so treat as just tie start
+                                    continuedNote = new Note(pitch, curTime, duration, timeSig, voice);
+                                    outstandingTies.add(continuedNote);
                                 }
-
-                                // extend duration of tie chain by that of new note
-                                continuedNote = outstandingTies.get(continuedNoteIdx);
-                                continuedNote.setDuration(continuedNote.getDuration().add(duration));
-                                outstandingTies.set(continuedNoteIdx, continuedNote);
+                                else {
+                                    // extend duration of tie chain by that of new note
+                                    continuedNote = outstandingTies.get(continuedNoteIdx);
+                                    continuedNote.setDuration(continuedNote.getDuration().add(duration));
+                                    outstandingTies.set(continuedNoteIdx, continuedNote);
+                                }
                             }
                             else if (isTieStop) {
                                 // find which note we are ending
-                                while (!(outstandingTies.get(continuedNoteIdx).getPitch().equals(pitch))) {
+                                while (continuedNoteIdx < outstandingTies.size() &&
+                                        !(outstandingTies.get(continuedNoteIdx).getPitch().equals(pitch))) {
                                     continuedNoteIdx++;
                                 }
                                 if (continuedNoteIdx == outstandingTies.size()) {
-                                    throw new RuntimeException("Found tie stop without corresponding tie start");
+                                    // tie must have been cut short cause of time sig change
+                                    // so treat as untied note
+                                    notesToOutput.add(new Note(pitch, curTime, duration, timeSig, voice));
                                 }
-
-                                // extend duration of tie chain by that of new note, and output
-                                continuedNote = outstandingTies.remove(continuedNoteIdx);
-                                continuedNote.setDuration(continuedNote.getDuration().add(duration));
-                                notesToOutput.add(continuedNote);
+                                else {
+                                    // extend duration of tie chain by that of new note, and output
+                                    continuedNote = outstandingTies.remove(continuedNoteIdx);
+                                    continuedNote.setDuration(continuedNote.getDuration().add(duration));
+                                    notesToOutput.add(continuedNote);
+                                }
                             }
                             else if (isTieStart) {
                                 continuedNote = new Note(pitch, curTime, duration, timeSig, voice);
