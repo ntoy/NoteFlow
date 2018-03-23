@@ -1,16 +1,22 @@
 package main.java;
 
-public class SmartNote extends NoteInKey {
+public class NoteInRhythm extends Note {
 
-    public SmartNote(NoteInKey cur, NoteInKey prev) {
+    public NoteInRhythm(Note cur, Note prev) {
         super(cur);
         if (prev == null) {
             onsetTime = new HierarchicalRelTime(cur.onsetTime, AbsoluteTime.ZERO, cur.getTimeSig());
         }
         else {
-            onsetTime = new HierarchicalRelTime(cur.onsetTime, prev.onsetTime.add(prev.duration), prev.getTimeSig());
+            onsetTime = new HierarchicalRelTime(cur.onsetTime, prev.onsetTime, prev.getTimeSig());
         }
         duration = new HierarchicalDur(cur.onsetTime, cur.duration, cur.getTimeSig());
+    }
+
+    public NoteInRhythm(NoteInRhythm that) {
+        super(that);
+        this.onsetTime = that.onsetTime;
+        this.duration = that.duration;
     }
 
     @Override

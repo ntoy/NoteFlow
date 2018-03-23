@@ -2,16 +2,16 @@ package main.java;
 
 import static main.java.PrintUtil.byteArrayToString;
 
-public class SmartNotePrinter implements Runnable {
-    private Pipe<SmartNote>.PipeSink inputPipe;
+public class NoteInKeyPrinter implements Runnable {
+    private Pipe<NoteInKey>.PipeSink inputPipe;
 
-    public SmartNotePrinter(Pipe<SmartNote>.PipeSink inputPipe) {
+    public NoteInKeyPrinter(Pipe<NoteInKey>.PipeSink inputPipe) {
         this.inputPipe = inputPipe;
     }
 
     @Override
     public void run() {
-        SmartNote note;
+        NoteInKey note;
         while ((note = inputPipe.read()) != null) {
             System.out.print(note.getKey() + "\t");
             System.out.print(note.getPitch().getPitchIndex() + "\t");

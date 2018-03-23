@@ -20,7 +20,12 @@ public class MusicXMLNoteReader implements Runnable {
 
     private static final int MAX_VOICES = 8;
     private static final Comparator<Note> compareByVoice = Comparator.comparingInt(Note::getVoice);
-    private static final Comparator<Note> compareByPitch = Comparator.comparing(Note::getPitch);
+    private static final Comparator<Note> compareByPitch = (o1, o2) -> {
+        if (o1.isGhost() && o2.isGhost()) return 0;
+        else if (o1.isGhost()) return -1;
+        else if (o2.isGhost()) return 1;
+        else return o1.getPitch().compareTo(o2.getPitch());
+    };
     private static final Comparator<Note> compareByOnsetTime = Comparator.comparing(Note::getOnsetTime);
     private static final XPath xPath = XPathFactory.newInstance().newXPath();
 
@@ -59,7 +64,6 @@ public class MusicXMLNoteReader implements Runnable {
 
     @Override
     public void run() {
-        // TODO: handle time sig changes (currently assuming constant time sig)
         // TODO: handle triplets and general tuplets (view as short-term time sig change)
         // TODO: handle pickups
 
@@ -178,6 +182,8 @@ public class MusicXMLNoteReader implements Runnable {
                             notesToOutput.addAll(outstandingTies);
                             outstandingTies.clear();
                         }
+                        // insert ghost to indicate location of time sig change
+                        notesToOutput.add(Note.newGhost(curTime.add(prevDur), timeSig));
                     }
                 }
                 if (timeSig == null)

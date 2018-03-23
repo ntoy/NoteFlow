@@ -54,6 +54,11 @@ public class TimeSig {
         return basis.clone();
     }
 
+    @Override
+    public String toString() {
+        return beats + "|" + beatType;
+    }
+
     public static void main(String[] args) {
         TimeSig timeSig = new TimeSig(4, 8);
         byte[] basis = timeSig.getBasis();

@@ -6,10 +6,10 @@ package main.java;
  * The key is represented as an integer between 0 and 23.
  * 0-11 represent C Major - B Major, 12-23 represent C minor - B minor.
  */
-public class NoteInKey extends Note {
+public class NoteInKey extends NoteInRhythm {
     private int key;
 
-    public NoteInKey(Note note, int key) {
+    public NoteInKey(NoteInRhythm note, int key) {
         super(note);
         this.key = key;
     }
@@ -33,11 +33,11 @@ public class NoteInKey extends Note {
                 + (key < 12 ? " major" : " minor");
     }
 
-    public static void main(String[] args) {
-        Note note = new Note(new Pitch(60), new AbsoluteTime(2, 1, 4),
-                new Duration(1, 4),
-                new TimeSig(4, 4), 1);
-        System.out.println(new NoteInKey(note, 3));
-        System.out.println(new NoteInKey(note, 15));
-    }
+//    public static void main(String[] args) {
+//        Note note = new Note(new Pitch(60), new AbsoluteTime(2, 1, 4),
+//                new Duration(1, 4),
+//                new TimeSig(4, 4), 1);
+//        System.out.println(new NoteInKey(note, 3));
+//        System.out.println(new NoteInKey(note, 15));
+//    }
 }
