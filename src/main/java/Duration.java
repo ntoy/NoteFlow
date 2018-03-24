@@ -5,6 +5,7 @@ import org.apache.commons.math3.fraction.Fraction;
 public class Duration implements Comparable<Duration> {
 
     public static final Duration ZERO = new Duration(Fraction.ZERO);
+    public static final Duration ONE = new Duration(Fraction.ONE);
 
     private Fraction value;
 
@@ -28,8 +29,16 @@ public class Duration implements Comparable<Duration> {
         return new Duration(this.value.add(that.value));
     }
 
+    public Duration subtract(Duration that) {
+        return new Duration(this.value.subtract(that.value));
+    }
+
     public Duration multiply(Duration that) {
         return new Duration(value.multiply(that.value));
+    }
+
+    public Duration multiply(int factor) {
+        return new Duration(value.multiply(factor));
     }
 
     @Override

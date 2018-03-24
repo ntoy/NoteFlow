@@ -45,6 +45,10 @@ public class AbsoluteTime implements Comparable<AbsoluteTime> {
         return new AbsoluteTime(measureOffset, measureFrac.add(duration.getValue()));
     }
 
+    public AbsoluteTime subtract(Duration duration) {
+        return add(new Duration(duration.getValue().negate()));
+    }
+
     @Override
     public String toString() {
         return "[time:" + measureOffset + " + " + measureFrac + "]";

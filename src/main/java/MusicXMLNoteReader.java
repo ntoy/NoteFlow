@@ -1,5 +1,6 @@
 package main.java;
 
+import org.apache.commons.math3.fraction.Fraction;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -13,8 +14,9 @@ import javax.xml.xpath.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
+
+import static main.java.NoteLengthTranslation.wordToDur;
 
 public class MusicXMLNoteReader implements Runnable {
 
@@ -27,13 +29,13 @@ public class MusicXMLNoteReader implements Runnable {
         else return o1.getPitch().compareTo(o2.getPitch());
     };
     private static final Comparator<Note> compareByOnsetTime = Comparator.comparing(Note::getOnsetTime);
-    private static final XPath xPath = XPathFactory.newInstance().newXPath();
 
-    private static XPathExpression measureExpr, partExpr, divisionsExpr, beatsExpr, beatTypeExpr,
+    private static final XPathExpression measureExpr, partExpr, divisionsExpr, beatsExpr, beatTypeExpr,
     noteBackupExpr, pitchStepExpr, pitchOctaveExpr, pitchAlterExpr, durationExpr, restExpr, voiceExpr,
-    chordExpr, tieExpr;
+    chordExpr, tieExpr, tupletExpr, actualNotesExpr, normalNotesExpr, normalTypeExpr, tupletTypeExpr;
 
     static {
+        final XPath xPath = XPathFactory.newInstance().newXPath();
         try {
             measureExpr = xPath.compile("//measure");
             partExpr = xPath.compile("./part");
@@ -49,6 +51,12 @@ public class MusicXMLNoteReader implements Runnable {
             voiceExpr = xPath.compile("./voice");
             chordExpr = xPath.compile("./chord");
             tieExpr = xPath.compile("./tie");
+            tupletExpr = xPath.compile("./notations/tuplet");
+            actualNotesExpr = xPath.compile("./time-modification/actual-notes");
+            normalNotesExpr = xPath.compile("./time-modification/normal-notes");
+            normalTypeExpr = xPath.compile("./time-modification/normal-type");
+            tupletTypeExpr = xPath.compile("./notations/tuplet/tuplet-actual/tuplet-type");
+
         } catch (XPathExpressionException e) {
             throw new RuntimeException("Failed to compile XPath expressions");
         }
@@ -56,6 +64,7 @@ public class MusicXMLNoteReader implements Runnable {
 
     private File inputFile;
     private Pipe<Note>.PipeSource outputPipe;
+    private DecentArrayList<Note> notesToOutput;
 
     public MusicXMLNoteReader(File inputFile, Pipe<Note>.PipeSource outputPipe) {
         this.inputFile = inputFile;
@@ -77,16 +86,10 @@ public class MusicXMLNoteReader implements Runnable {
         }
 
         DecentArrayList<Note> notesToOutput = new DecentArrayList<>();
+        // position in notesToOutput where notes found in this measure start
+        int startOfNewNotes = 0;
         Duration prevDur = Duration.ZERO; // necessary in case we discover we're in a chord
 
-        // says whether time sig or number of divisions per quarter note has changed
-//        boolean timeChange = false;
-
-        // list of measure-relative dur/dur in divisions correspondences at each time change
-//        ArrayList<Pair<Integer, AbsoluteTime>> durCheckpoints = new ArrayList<>();
-
-        // start at time zero
-//        int curTimeInDivs = 0;
         AbsoluteTime curTime = AbsoluteTime.ZERO;
 
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -146,11 +149,6 @@ public class MusicXMLNoteReader implements Runnable {
                     failEvaluate();
                 }
                 if (divisionsNode != null) {
-//                    int newDivisions = Integer.parseInt(divisionsNode.getTextContent());
-//                    if (newDivisions != divisions) {
-//                        timeChange = true;
-//                        divisions = newDivisions;
-//                    }
                     divisions = Integer.parseInt(divisionsNode.getTextContent());
                 }
 
@@ -167,12 +165,6 @@ public class MusicXMLNoteReader implements Runnable {
                     failEvaluate();
                 }
                 if (timeSigBeatsNode != null && timeSigBeatTypeNode != null) {
-//                    TimeSig newTimeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
-//                            Integer.parseInt(timeSigBeatTypeNode.getTextContent()));
-//                    if (!newTimeSig.equals(timeSig)) {
-//                        timeChange = true;
-//                        timeSig = newTimeSig;
-//                    }
                     boolean timeSigChange = (timeSig != null);
                     timeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
                             Integer.parseInt(timeSigBeatTypeNode.getTextContent()));
@@ -188,11 +180,6 @@ public class MusicXMLNoteReader implements Runnable {
                 }
                 if (timeSig == null)
                     throw new IllegalStateException("No time signature found");
-
-//                if (timeChange) {
-//                    durCheckpoints.add(new Pair<>(curTimeInDivs, curTime));
-//                    timeChange = false;
-//                }
 
                 // get list of notes in part in measure
                 NodeList noteBackupList = null;
@@ -213,7 +200,7 @@ public class MusicXMLNoteReader implements Runnable {
                         Element pitchStepElement = null, pitchOctaveElement = null,
                                 pitchAlterElement = null, durationElement = null,
                                 restElement = null, voiceElement = null,
-                                chordElement = null;
+                                chordElement = null, tupletElement = null;
                         NodeList ties = null;
 
                         try {
@@ -232,6 +219,8 @@ public class MusicXMLNoteReader implements Runnable {
                             chordElement = (Element)
                                     chordExpr.evaluate(noteNode, XPathConstants.NODE);
                             ties = (NodeList) tieExpr.evaluate(noteNode, XPathConstants.NODESET);
+                            tupletElement = (Element)
+                                    tupletExpr.evaluate(noteNode, XPathConstants.NODE);
                         } catch (XPathExpressionException e) {
                             failEvaluate();
                         }
@@ -244,6 +233,22 @@ public class MusicXMLNoteReader implements Runnable {
                         int durInDivs = Integer.parseInt(durationElement.getTextContent());
                         Duration duration = new Duration(durInDivs * timeSig.getBeatType(),
                                 4 * divisions * timeSig.getBeats());
+
+                        String tupletStartOrStop = "";
+                        if (tupletElement != null) {
+                            tupletStartOrStop = tupletElement.getAttribute("type");
+                        }
+
+                        // if starting tuplet
+                        if (tupletStartOrStop.equals("start")) {
+                            int numDivs = findTupletNumDivs(noteNode);
+                            int oldNumDivs = findTupletOldNumDivs(noteNode);
+                            Duration divUnit = findTupletDivUnit(noteNode);
+                            // by default, unit of tuplet is duration of its first note
+                            if (divUnit == null)
+                                divUnit = duration;
+                            timeSig = timeSig.ofTuplet(numDivs, oldNumDivs, divUnit, curTime);
+                        }
 
                         // if this is not a rest
                         if (restElement == null) {
@@ -259,7 +264,7 @@ public class MusicXMLNoteReader implements Runnable {
 
                             // handle ties
                             boolean isTieStart = false, isTieStop = false;
-                            if (ties != null) {
+                            if (ties != null && ties.getLength() > 0) {
                                 // figure out what types of ties we have (start, stop...)
                                 assert (ties.getLength() == 1 || ties.getLength() == 2);
                                 for (int m = 0; m < ties.getLength(); m++) {
@@ -274,7 +279,7 @@ public class MusicXMLNoteReader implements Runnable {
                                 }
                             }
 
-                            Note continuedNote = null;
+                            Note continuedNote;
                             ArrayList<Note> outstandingTies = outstandingTiesPerVoice.get(voice);
                             int continuedNoteIdx = 0;
 
@@ -324,6 +329,11 @@ public class MusicXMLNoteReader implements Runnable {
                             }
                         }
 
+                        // if ending tuplet
+                        if (tupletStartOrStop.equals("stop")) {
+                            timeSig = timeSig.getParent();
+                        }
+
                         prevDur = duration;
                     }
                     else { // if is backup
@@ -341,10 +351,24 @@ public class MusicXMLNoteReader implements Runnable {
                     }
                 }
             }
+
+            // if measure is not full, assume it is a pickup
+            Fraction measurePosition = curTime.add(prevDur).getMeasureFrac();
+            if (!measurePosition.equals(Fraction.ZERO)) {
+                Duration increase = new Duration(Fraction.ONE.subtract(measurePosition));
+                for (int n = startOfNewNotes; n < notesToOutput.size(); n++) {
+                    Note note = notesToOutput.get(n);
+                    note.setOnsetTime(note.getOnsetTime().add(increase));
+                }
+                AbsoluteTime ghostTime = curTime.add(prevDur).subtract(new Duration(measurePosition));
+                notesToOutput.add(Note.newGhost(ghostTime, timeSig));
+                curTime = curTime.add(increase);
+            }
+
             // lexicographically sort by (onset time, pitch, voice)
-            Collections.sort(notesToOutput, compareByVoice);
-            Collections.sort(notesToOutput, compareByPitch);
-            Collections.sort(notesToOutput, compareByOnsetTime);
+            notesToOutput.sort(compareByVoice);
+            notesToOutput.sort(compareByPitch);
+            notesToOutput.sort(compareByOnsetTime);
 
             AbsoluteTime oldestOutstandingTieOnset = curTime.add(prevDur);
             for (int v = 0; v < MAX_VOICES; v++) {
@@ -365,8 +389,55 @@ public class MusicXMLNoteReader implements Runnable {
                 outputPipe.write(note);
             }
             notesToOutput.removeRange(0, n);
+            startOfNewNotes = notesToOutput.size();
         }
         outputPipe.close();
+    }
+
+    private static int findTupletNumDivs(Node noteNode) {
+        Element actualNotes = null;
+        try {
+            actualNotes = (Element) actualNotesExpr.evaluate(noteNode, XPathConstants.NODE);
+        } catch (XPathExpressionException e) {
+            failEvaluate();
+        }
+        return Integer.parseInt(actualNotes.getTextContent());
+    }
+
+    private static int findTupletOldNumDivs(Node noteNode) {
+        Element normalNotes = null;
+        try {
+            normalNotes = (Element) normalNotesExpr.evaluate(noteNode, XPathConstants.NODE);
+        } catch (XPathExpressionException e) {
+            failEvaluate();
+        }
+        return Integer.parseInt(normalNotes.getTextContent());
+    }
+
+    private static Duration findTupletDivUnit(Node noteNode) {
+        Element normalType = null;
+        try {
+            normalType = (Element) normalTypeExpr.evaluate(noteNode, XPathConstants.NODE);
+        } catch (XPathExpressionException e) {
+            failEvaluate();
+        }
+        if (normalType != null) {
+            return wordToDur(normalType.getTextContent());
+        }
+        else {
+            Element tupletType = null;
+            try {
+                tupletType = (Element) tupletTypeExpr.evaluate(noteNode, XPathConstants.NODE);
+            } catch (XPathExpressionException e) {
+                failEvaluate();
+            }
+            if (tupletType != null) {
+                return wordToDur(tupletType.getTextContent());
+            }
+            else {
+                return null;
+            }
+        }
     }
 
     private static void failEvaluate() {

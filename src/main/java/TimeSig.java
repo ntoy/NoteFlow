@@ -3,7 +3,7 @@ package main.java;
 public class TimeSig {
     private int beats;
     private int beatType;
-
+    private byte[] parentBasis;
     private byte[] basis;
 
     private static final int BASIS_LENGTH = 6;
@@ -12,6 +12,7 @@ public class TimeSig {
         this.beats = beats;
         this.beatType = beatType;
         basis = new byte[BASIS_LENGTH];
+        parentBasis = null;
 
         // Find (a, b) such that beats == 2^a * 3^b, assuming n is of that form
         int twoExponent = 0;
@@ -40,6 +41,51 @@ public class TimeSig {
         for (int i = twoExponent + threeExponent; i < BASIS_LENGTH; i++) {
             basis[i] = 2;
         }
+    }
+
+    // private copy constructor
+    private TimeSig(TimeSig that) {
+        this.beats = that.beats;
+        this.beatType = that.beatType;
+        this.parentBasis = that.parentBasis;
+        this.basis = that.basis.clone();
+    }
+
+    public TimeSig ofTuplet(int numDivs, int oldNumDivs, Duration divUnit, AbsoluteTime startTime) {
+        if (parentBasis != null) {
+            throw new IllegalStateException("Already in tuplet; nested tuplets not supported");
+        }
+
+        AbsoluteTime tupletSpan = AbsoluteTime.ZERO.add(divUnit.multiply(oldNumDivs));
+        HierarchicalRelTime hierachicalSpan =
+                new HierarchicalRelTime(tupletSpan, AbsoluteTime.ZERO, this);
+        if (hierachicalSpan.getIncrement() != 1) {
+            throw new IllegalArgumentException("Tuplet length not aligned to grid: not supported");
+        }
+        HierarchicalRelTime hierarchicalStartTime =
+                new HierarchicalRelTime(startTime, AbsoluteTime.ZERO, this);
+        if (hierarchicalStartTime.getLevel() > hierachicalSpan.getLevel()) {
+            throw new IllegalArgumentException("Tuplet start not aligned to grid: not supported");
+        }
+
+        TimeSig child = new TimeSig(this);
+        child.parentBasis = child.basis.clone();
+        child.basis[hierachicalSpan.getLevel()] = (byte) numDivs; // no more than 127 divisions hopefully
+        for (int i = hierachicalSpan.getLevel() + 1; i < child.basis.length; i++) {
+            child.basis[i] = 2;
+        }
+        return child;
+    }
+
+    public TimeSig getParent() {
+        if (parentBasis == null) {
+            throw new IllegalStateException("Not in tuplet");
+        }
+
+        TimeSig parent = new TimeSig(this);
+        parent.basis = parent.parentBasis;
+        parent.parentBasis = null;
+        return parent;
     }
 
     public int getBeats() {

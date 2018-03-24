@@ -1,5 +1,7 @@
 package main.java;
 
+import static main.java.PrintUtil.byteArrayToString;
+
 public class Note {
 
     private Pitch pitch;
@@ -40,6 +42,10 @@ public class Note {
         return onsetTime;
     }
 
+    public void setOnsetTime(AbsoluteTime onsetTime) {
+        this.onsetTime = onsetTime;
+    }
+
     public Duration getDuration() {
         return duration;
     }
@@ -76,7 +82,7 @@ public class Note {
             return "Ghost @ " + onsetTime.toString() + " in time sig " + timeSig.toString();
         }
         return pitch.toString() + " @ " + onsetTime.toString() + " for " + duration.toString()
-                + " in [voice:" + voice + "]";
+                + " in [voice:" + voice + "] in " + timeSig.toString() + " w/ basis " + byteArrayToString(timeSig.getBasis());
     }
 
     private Note() {}
