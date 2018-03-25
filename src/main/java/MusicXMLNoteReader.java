@@ -16,8 +16,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 
-import static main.java.NoteLengthTranslation.wordToDur;
-
 public class MusicXMLNoteReader implements Runnable {
 
     private static final int MAX_VOICES = 8;
@@ -65,6 +63,11 @@ public class MusicXMLNoteReader implements Runnable {
     private File inputFile;
     private Pipe<Note>.PipeSource outputPipe;
     private DecentArrayList<Note> notesToOutput;
+    private ArrayList<ArrayList<Note>> outstandingTiesPerVoice;
+    private AbsoluteTime curTime;
+    private Duration prevDur;
+    private TimeSig timeSig;
+    private TimeSig prevTimeSig;
 
     public MusicXMLNoteReader(File inputFile, Pipe<Note>.PipeSource outputPipe) {
         this.inputFile = inputFile;
@@ -77,20 +80,22 @@ public class MusicXMLNoteReader implements Runnable {
         // TODO: handle pickups
 
         int divisions = 0;
-        TimeSig timeSig = null;
+        timeSig = null;
+        prevTimeSig = null;
 
         // invariant: each list in outstandingTiesPerVoice is sorted by onset time
-        ArrayList<ArrayList<Note>> outstandingTiesPerVoice = new ArrayList<>(MAX_VOICES);
+        outstandingTiesPerVoice = new ArrayList<>(MAX_VOICES);
         for (int i = 0; i < MAX_VOICES; i++) {
             outstandingTiesPerVoice.add(new ArrayList<>());
         }
 
-        DecentArrayList<Note> notesToOutput = new DecentArrayList<>();
+        notesToOutput = new DecentArrayList<>();
         // position in notesToOutput where notes found in this measure start
         int startOfNewNotes = 0;
-        Duration prevDur = Duration.ZERO; // necessary in case we discover we're in a chord
+        // necessary in case we discover we're in a chord
+        prevDur = Duration.ZERO;
 
-        AbsoluteTime curTime = AbsoluteTime.ZERO;
+        curTime = AbsoluteTime.ZERO;
 
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = null;
@@ -165,18 +170,12 @@ public class MusicXMLNoteReader implements Runnable {
                     failEvaluate();
                 }
                 if (timeSigBeatsNode != null && timeSigBeatTypeNode != null) {
-                    boolean timeSigChange = (timeSig != null);
+//                    boolean timeSigChange = (timeSig != null);
                     timeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
                             Integer.parseInt(timeSigBeatTypeNode.getTextContent()));
-                    if (timeSigChange) {
-                        // force-close all outstanding ties
-                        for (ArrayList<Note> outstandingTies : outstandingTiesPerVoice) {
-                            notesToOutput.addAll(outstandingTies);
-                            outstandingTies.clear();
-                        }
-                        // insert ghost to indicate location of time sig change
-                        notesToOutput.add(Note.newGhost(curTime.add(prevDur), timeSig));
-                    }
+//                    if (timeSigChange) {
+//                        cutTiesAndInsertGhost();
+//                    }
                 }
                 if (timeSig == null)
                     throw new IllegalStateException("No time signature found");
@@ -243,11 +242,18 @@ public class MusicXMLNoteReader implements Runnable {
                         if (tupletStartOrStop.equals("start")) {
                             int numDivs = findTupletNumDivs(noteNode);
                             int oldNumDivs = findTupletOldNumDivs(noteNode);
-                            Duration divUnit = findTupletDivUnit(noteNode);
-                            // by default, unit of tuplet is duration of its first note
-                            if (divUnit == null)
-                                divUnit = duration;
-                            timeSig = timeSig.ofTuplet(numDivs, oldNumDivs, divUnit, curTime);
+                            String divUnit = findTupletDivUnit(noteNode);
+                            timeSig = timeSig.ofTuplet(numDivs, oldNumDivs, divUnit, duration, curTime);
+                        }
+
+                        if (!timeSig.equals(prevTimeSig)) {
+                            // force-close all outstanding ties
+                            for (ArrayList<Note> outstandingTies : outstandingTiesPerVoice) {
+                                notesToOutput.addAll(outstandingTies);
+                                outstandingTies.clear();
+                            }
+                            // insert ghost to indicate location of time sig change
+                            notesToOutput.add(Note.newGhost(curTime, timeSig));
                         }
 
                         // if this is not a rest
@@ -331,10 +337,12 @@ public class MusicXMLNoteReader implements Runnable {
 
                         // if ending tuplet
                         if (tupletStartOrStop.equals("stop")) {
+                            //cutTiesAndInsertGhost();
                             timeSig = timeSig.getParent();
                         }
 
                         prevDur = duration;
+                        prevTimeSig = timeSig;
                     }
                     else { // if is backup
                         Node backupNode = noteOrBackup;
@@ -414,7 +422,7 @@ public class MusicXMLNoteReader implements Runnable {
         return Integer.parseInt(normalNotes.getTextContent());
     }
 
-    private static Duration findTupletDivUnit(Node noteNode) {
+    private static String findTupletDivUnit(Node noteNode) {
         Element normalType = null;
         try {
             normalType = (Element) normalTypeExpr.evaluate(noteNode, XPathConstants.NODE);
@@ -422,7 +430,7 @@ public class MusicXMLNoteReader implements Runnable {
             failEvaluate();
         }
         if (normalType != null) {
-            return wordToDur(normalType.getTextContent());
+            return normalType.getTextContent();
         }
         else {
             Element tupletType = null;
@@ -432,7 +440,7 @@ public class MusicXMLNoteReader implements Runnable {
                 failEvaluate();
             }
             if (tupletType != null) {
-                return wordToDur(tupletType.getTextContent());
+                return tupletType.getTextContent();
             }
             else {
                 return null;

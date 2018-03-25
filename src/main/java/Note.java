@@ -82,7 +82,7 @@ public class Note {
             return "Ghost @ " + onsetTime.toString() + " in time sig " + timeSig.toString();
         }
         return pitch.toString() + " @ " + onsetTime.toString() + " for " + duration.toString()
-                + " in [voice:" + voice + "] in " + timeSig.toString() + " w/ basis " + byteArrayToString(timeSig.getBasis());
+                + " in [voice:" + voice + "] in " + timeSig.toString() + " w/ basis \t" + byteArrayToString(timeSig.getBasis());
     }
 
     private Note() {}

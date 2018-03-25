@@ -1,5 +1,9 @@
 package main.java;
 
+import java.util.Arrays;
+
+import static main.java.NoteLengthTranslation.wordToDur;
+
 public class TimeSig {
     private int beats;
     private int beatType;
@@ -51,12 +55,25 @@ public class TimeSig {
         this.basis = that.basis.clone();
     }
 
-    public TimeSig ofTuplet(int numDivs, int oldNumDivs, Duration divUnit, AbsoluteTime startTime) {
+    public TimeSig ofTuplet(int numDivs, int oldNumDivs, String divUnit,
+                            Duration firstNoteDur, AbsoluteTime startTime) {
         if (parentBasis != null) {
             throw new IllegalStateException("Already in tuplet; nested tuplets not supported");
         }
 
-        AbsoluteTime tupletSpan = AbsoluteTime.ZERO.add(divUnit.multiply(oldNumDivs));
+        Duration adjustedDivUnit;
+        if (divUnit != null) {
+            Duration lengthAdjustment = new Duration(getBeatType(), getBeats());
+            adjustedDivUnit = wordToDur(divUnit).multiply(lengthAdjustment);
+        }
+        else if (firstNoteDur != null) {
+            adjustedDivUnit = firstNoteDur.multiply(new Duration(numDivs, oldNumDivs));
+        }
+        else {
+            throw new NullPointerException("At least one of divUnit and firstNoteDur must be non-null");
+        }
+
+        AbsoluteTime tupletSpan = AbsoluteTime.ZERO.add(adjustedDivUnit.multiply(oldNumDivs));
         HierarchicalRelTime hierachicalSpan =
                 new HierarchicalRelTime(tupletSpan, AbsoluteTime.ZERO, this);
         if (hierachicalSpan.getIncrement() != 1) {
@@ -98,6 +115,17 @@ public class TimeSig {
 
     public byte[] getBasis() {
         return basis.clone();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+        if (that == this) return true;
+        if (!(that instanceof TimeSig)) return false;
+        TimeSig thatTimeSig = (TimeSig) that;
+        return this.beats == thatTimeSig.beats
+                && this.beatType == thatTimeSig.beatType
+                && Arrays.equals(this.basis, thatTimeSig.basis)
+                && Arrays.equals(this.parentBasis, thatTimeSig.parentBasis);
     }
 
     @Override
