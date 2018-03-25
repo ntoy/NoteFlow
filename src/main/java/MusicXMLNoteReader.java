@@ -29,7 +29,8 @@ public class MusicXMLNoteReader implements Runnable {
 
     private static final XPathExpression measureExpr, partExpr, divisionsExpr, beatsExpr, beatTypeExpr,
     noteBackupExpr, pitchStepExpr, pitchOctaveExpr, pitchAlterExpr, durationExpr, restExpr, voiceExpr,
-    chordExpr, tieExpr, tupletExpr, actualNotesExpr, normalNotesExpr, normalTypeExpr, tupletTypeExpr;
+    chordExpr, tieExpr, tupletExpr, actualNotesExpr, normalNotesExpr, normalTypeExpr, tupletTypeExpr,
+    graceExpr;
 
     public static final int MAX_VOICES = 8;
 
@@ -55,6 +56,7 @@ public class MusicXMLNoteReader implements Runnable {
             normalNotesExpr = xPath.compile("./time-modification/normal-notes");
             normalTypeExpr = xPath.compile("./time-modification/normal-type");
             tupletTypeExpr = xPath.compile("./notations/tuplet/tuplet-actual/tuplet-type");
+            graceExpr = xPath.compile("./grace");
 
         } catch (XPathExpressionException e) {
             throw new RuntimeException("Failed to compile XPath expressions");
@@ -178,8 +180,9 @@ public class MusicXMLNoteReader implements Runnable {
 //                        cutTiesAndInsertGhost();
 //                    }
                 }
-                if (timeSig == null)
-                    throw new IllegalStateException("No time signature found");
+                if (timeSig == null) {
+                    timeSig = new TimeSig(4, 4);
+                }
 
                 // get list of notes in part in measure
                 NodeList noteBackupList = null;
@@ -200,7 +203,8 @@ public class MusicXMLNoteReader implements Runnable {
                         Element pitchStepElement = null, pitchOctaveElement = null,
                                 pitchAlterElement = null, durationElement = null,
                                 restElement = null, voiceElement = null,
-                                chordElement = null, tupletElement = null;
+                                chordElement = null, tupletElement = null,
+                                graceElement = null;
                         NodeList ties = null;
 
                         try {
@@ -221,8 +225,14 @@ public class MusicXMLNoteReader implements Runnable {
                             ties = (NodeList) tieExpr.evaluate(noteNode, XPathConstants.NODESET);
                             tupletElement = (Element)
                                     tupletExpr.evaluate(noteNode, XPathConstants.NODE);
+                            graceElement = (Element)
+                                    graceExpr.evaluate(noteNode, XPathConstants.NODE);
                         } catch (XPathExpressionException e) {
                             failEvaluate();
+                        }
+
+                        if (graceElement != null) {
+                            continue;
                         }
 
                         // only increment time if this note is not on top of the previous
