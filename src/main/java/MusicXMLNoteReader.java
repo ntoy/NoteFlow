@@ -18,7 +18,6 @@ import java.util.Comparator;
 
 public class MusicXMLNoteReader implements Runnable {
 
-    private static final int MAX_VOICES = 8;
     private static final Comparator<Note> compareByVoice = Comparator.comparingInt(Note::getVoice);
     private static final Comparator<Note> compareByPitch = (o1, o2) -> {
         if (o1.isGhost() && o2.isGhost()) return 0;
@@ -31,6 +30,8 @@ public class MusicXMLNoteReader implements Runnable {
     private static final XPathExpression measureExpr, partExpr, divisionsExpr, beatsExpr, beatTypeExpr,
     noteBackupExpr, pitchStepExpr, pitchOctaveExpr, pitchAlterExpr, durationExpr, restExpr, voiceExpr,
     chordExpr, tieExpr, tupletExpr, actualNotesExpr, normalNotesExpr, normalTypeExpr, tupletTypeExpr;
+
+    public static final int MAX_VOICES = 8;
 
     static {
         final XPath xPath = XPathFactory.newInstance().newXPath();

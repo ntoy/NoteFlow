@@ -72,7 +72,7 @@ public class Note {
         ghost.onsetTime = onsetTime;
         ghost.timeSig = timeSig;
         ghost.duration = Duration.ZERO;
-        ghost.voice = -1;
+        ghost.voice = 0;
         return ghost;
     }
 

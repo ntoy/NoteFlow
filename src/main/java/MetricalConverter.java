@@ -11,12 +11,13 @@ public class MetricalConverter implements Runnable {
 
     @Override
     public void run() {
-        Note cur, prev = null;
+        Note cur = null;
+        Note[] prevPerVoice = new Note[MusicXMLNoteReader.MAX_VOICES];
         while ((cur = inputPipe.read()) != null) {
             if (!cur.isGhost()) {
-                outputPipe.write(new NoteInRhythm(cur, prev));
+                outputPipe.write(new NoteInRhythm(cur, prevPerVoice[cur.getVoice()]));
             }
-            prev = cur;
+            prevPerVoice[cur.getVoice()] = cur;
         }
         outputPipe.close();
     }
