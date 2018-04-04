@@ -10,7 +10,7 @@ public class TimeSig {
     private byte[] parentBasis;
     private byte[] basis;
 
-    private static final int BASIS_LENGTH = 6;
+    private static final int BASIS_LENGTH = 5;
 
     public TimeSig(int beats, int beatType) {
         this.beats = beats;

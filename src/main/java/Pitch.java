@@ -1,5 +1,7 @@
 package main.java;
 
+import static main.java.LongDivision.*;
+
 public class Pitch implements Comparable<Pitch> {
     private int midiIndex;
 
@@ -22,16 +24,20 @@ public class Pitch implements Comparable<Pitch> {
         return midiIndex / 12 - 1;
     }
 
+    public int getOctaveOffset(Pitch that) {
+        return quotient(this.midiIndex - that.midiIndex, 12, -6);
+    }
+
     public int getPitchIndex() {
-        return mod(midiIndex, 12);
+        return remainder(midiIndex, 12);
     }
 
     public String getPitchNameSharp() {
-        int pitchIndex = mod(midiIndex, 12);
+        int pitchIndex = remainder(midiIndex, 12);
         int minNumSharps = 12;
         int argmin = -1;
         for (int i = 0; i < 7; i++) {
-            int numSharps = mod((pitchIndex - noteNameOffsets[i]), 12);
+            int numSharps = remainder((pitchIndex - noteNameOffsets[i]), 12);
             if (numSharps < minNumSharps) {
                 minNumSharps = numSharps;
                 argmin = i;
@@ -42,11 +48,11 @@ public class Pitch implements Comparable<Pitch> {
     }
 
     public String getPitchNameFlat() {
-        int pitchIndex = mod(midiIndex, 12);
+        int pitchIndex = remainder(midiIndex, 12);
         int minNumFlats = 12;
         int argmin = -1;
         for (int i = 0; i < 7; i++) {
-            int numFlats = mod((noteNameOffsets[i] - pitchIndex), 12);
+            int numFlats = remainder((noteNameOffsets[i] - pitchIndex), 12);
             if (numFlats < minNumFlats) {
                 minNumFlats = numFlats;
                 argmin = i;
@@ -72,11 +78,6 @@ public class Pitch implements Comparable<Pitch> {
     @Override
     public String toString() {
         return getPitchNameSharp() + getOctave();
-    }
-
-    private static int mod(int a, int b) {
-        int x = a % b;
-        return x >= 0 ? x : x + b;
     }
 
     public static void main(String args[]) {

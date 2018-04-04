@@ -10,9 +10,9 @@ public class Main {
                 "main/res/musicxml30");
 
         File inputFile = new File(args[0]);
-        Pipe<Note> notePipe = new Pipe<>(32);
-        Pipe<NoteInRhythm> noteInRhythmPipe = new Pipe<>(32);
-        Pipe<NoteInKey> noteInKeyPipe = new Pipe<>(32);
+        Pipe<Note> notePipe = new Pipe<>(128);
+        Pipe<NoteInRhythm> noteInRhythmPipe = new Pipe<>(128);
+        Pipe<NoteInKey> noteInKeyPipe = new Pipe<>(128);
 
         Thread musicMXLNoteReader = new Thread(new MusicXMLNoteReader(inputFile, notePipe.source));
         Thread metricalConverter =

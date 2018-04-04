@@ -11,11 +11,16 @@ public class NoteInKeyPrinter implements Runnable {
 
     @Override
     public void run() {
+        Pitch startRefPitch = new Pitch(4, "C", 0);
+        NoteInKey prev = null;
         NoteInKey note;
         while ((note = inputPipe.read()) != null) {
-            System.out.print(note.getKey() + "\t");
-            System.out.print(note.getPitch().getPitchIndex() + "\t");
-            System.out.print(note.getPitch().getOctave() + "\t");
+            System.out.print(note.getKeyCircleFifths() + "\t");
+            System.out.print(note.getKeyMode() + "\t");
+            System.out.print(note.getRelPitchPlain() + "\t");
+
+            System.out.print(note.getPitch().getOctaveOffset(
+                    prev == null ? startRefPitch : prev.getPitch()) + "\t");
             System.out.print(byteArrayToString(note.getTimeSig().getBasis()) + "\t");
 
             HierarchicalRelTime onset = note.getOnsetTime();
@@ -28,6 +33,8 @@ public class NoteInKeyPrinter implements Runnable {
 
             System.out.print(note.getVoice() + "\t");
             System.out.println();
+
+            prev = note;
         }
     }
 }
