@@ -81,14 +81,14 @@ public class TimeSig {
         }
         HierarchicalRelTime hierarchicalStartTime =
                 new HierarchicalRelTime(startTime, AbsoluteTime.ZERO, this);
-        if (hierarchicalStartTime.getLevel() > hierachicalSpan.getLevel()) {
+        if (hierarchicalStartTime.getDepth() > hierachicalSpan.getDepth()) {
             throw new IllegalArgumentException("Tuplet start not aligned to grid: not supported");
         }
 
         TimeSig child = new TimeSig(this);
         child.parentBasis = child.basis.clone();
-        child.basis[hierachicalSpan.getLevel()] = (byte) numDivs; // no more than 127 divisions hopefully
-        for (int i = hierachicalSpan.getLevel() + 1; i < child.basis.length; i++) {
+        child.basis[hierachicalSpan.getDepth()] = (byte) numDivs; // no more than 127 divisions hopefully
+        for (int i = hierachicalSpan.getDepth() + 1; i < child.basis.length; i++) {
             child.basis[i] = 2;
         }
         return child;

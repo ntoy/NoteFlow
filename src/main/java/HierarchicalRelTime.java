@@ -9,7 +9,7 @@ import static main.java.PrintUtil.byteArrayToString;
 import static main.java.PrintUtil.intArrayToString;
 
 public class HierarchicalRelTime extends AbsoluteTime {
-    private int level;
+    private int depth;
     private int increment;
 
     public HierarchicalRelTime(AbsoluteTime cur, AbsoluteTime prev, TimeSig timeSig) {
@@ -19,35 +19,35 @@ public class HierarchicalRelTime extends AbsoluteTime {
         int[] prevTree = treeNotation(prev, basis);
 
         // get index of last nonzero digit for curTree (or 0 if all zeros)
-        int l = curTree.length - 1;
-        while (curTree[l] == 0 && l > 0) {
-            l--;
+        int d = curTree.length - 1;
+        while (curTree[d] == 0 && d > 0) {
+            d--;
         }
-        level = l;
+        depth = d;
 
-        byte[] basisTruncated = Arrays.copyOfRange(basis, 0, level);
-        int[] curTruncated = Arrays.copyOfRange(curTree, 0, level + 1);
+        byte[] basisTruncated = Arrays.copyOfRange(basis, 0, depth);
+        int[] curTruncated = Arrays.copyOfRange(curTree, 0, depth + 1);
 
-        // find smallest tree notated time with all zeros beyond index [level]
+        // find smallest tree notated time with all zeros beyond index [depth]
         // that is greater than or equal to [prevTree]
-        // (all zeros beyond index [level] cropped off)
-        int[] ceilingTruncated = Arrays.copyOfRange(prevTree, 0, level + 1);
-        l = prevTree.length - 1;
-        while (prevTree[l] == 0 && l > level) {
-            l--;
+        // (all zeros beyond index [depth] cropped off)
+        int[] ceilingTruncated = Arrays.copyOfRange(prevTree, 0, depth + 1);
+        d = prevTree.length - 1;
+        while (prevTree[d] == 0 && d > depth) {
+            d--;
         }
-        // increment at [level] if prevTree is not its own "ceiling"
-        if (l != level) {
-            int[] one = new int[level + 1];
-            one[level] = 1;
+        // increment at [depth] if prevTree is not its own "ceiling"
+        if (d != depth) {
+            int[] one = new int[depth + 1];
+            one[depth] = 1;
             ceilingTruncated = treeNotationSum(ceilingTruncated, one, basisTruncated);
         }
 
         increment = treeNotationIntValue(treeNotationDiff(curTruncated, ceilingTruncated, basisTruncated), basisTruncated);
     }
 
-    public int getLevel() {
-        return level;
+    public int getDepth() {
+        return depth;
     }
 
     public int getIncrement() {
@@ -168,7 +168,7 @@ public class HierarchicalRelTime extends AbsoluteTime {
         for (int i = 1; i < absoluteTimes.size(); i++) {
             HierarchicalRelTime time =
                 new HierarchicalRelTime(absoluteTimes.get(i), absoluteTimes.get(i-1), timeSig);
-            System.out.println("lev: " + time.level);
+            System.out.println("lev: " + time.depth);
             System.out.println("inc: " + time.increment);
         }
     }

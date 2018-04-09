@@ -3,7 +3,7 @@ package main.java;
 import java.util.ArrayList;
 import java.util.Collection;
 
-// A non-stupid ArrayList that allows us to remove chunks instead
+// An ArrayList that allows us to remove chunks instead
 // of forcing us to inefficiently remove them one by one and shift
 // everything each time
 public class DecentArrayList<E> extends ArrayList<E> {

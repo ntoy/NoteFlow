@@ -5,7 +5,7 @@ import java.util.Arrays;
 import static main.java.HierarchicalRelTime.*;
 
 public class HierarchicalDur extends Duration {
-    private int level;
+    private int depth;
     private int increment;
 
     public HierarchicalDur(AbsoluteTime onsetTime, Duration duration, TimeSig timeSig) {
@@ -16,32 +16,32 @@ public class HierarchicalDur extends Duration {
         int[] onsetTree = treeNotation(onsetTime, basis);
 
         // get index of last nonzero digit for curTree (or 0 if all zeros)
-        int l = offsetTree.length - 1;
-        while (offsetTree[l] == 0 && l > 0) {
-            l--;
+        int d = offsetTree.length - 1;
+        while (offsetTree[d] == 0 && d > 0) {
+            d--;
         }
-        level = l;
+        depth = d;
 
-        byte[] basisTruncated = Arrays.copyOfRange(basis, 0, level);
-        int[] curTruncated = Arrays.copyOfRange(offsetTree, 0, level + 1);
+        byte[] basisTruncated = Arrays.copyOfRange(basis, 0, depth);
+        int[] curTruncated = Arrays.copyOfRange(offsetTree, 0, depth + 1);
 
-        // find smallest tree notated time with all zeros beyond index [level]
+        // find smallest tree notated time with all zeros beyond index [depth]
         // that is (STRICTLY) greater than [prevTree]
-        // (all zeros beyond index [level] cropped off)
-        int[] ceilingTruncated = Arrays.copyOfRange(onsetTree, 0, level + 1);
-        l = onsetTree.length - 1;
-        while (onsetTree[l] == 0 && l > level) {
-            l--;
+        // (all zeros beyond index [depth] cropped off)
+        int[] ceilingTruncated = Arrays.copyOfRange(onsetTree, 0, depth + 1);
+        d = onsetTree.length - 1;
+        while (onsetTree[d] == 0 && d > depth) {
+            d--;
         }
-        int[] one = new int[level + 1];
-        one[level] = 1;
+        int[] one = new int[depth + 1];
+        one[depth] = 1;
         ceilingTruncated = treeNotationSum(ceilingTruncated, one, basisTruncated);
 
         increment = treeNotationIntValue(treeNotationDiff(curTruncated, ceilingTruncated, basisTruncated), basisTruncated);
     }
 
-    public int getLevel() {
-        return level;
+    public int getDepth() {
+        return depth;
     }
 
     public int getIncrement() {

@@ -24,11 +24,11 @@ public class NoteInKeyPrinter implements Runnable {
             System.out.print(byteArrayToString(note.getTimeSig().getBasis()) + "\t");
 
             HierarchicalRelTime onset = note.getOnsetTime();
-            System.out.print(onset.getLevel() + "\t");
+            System.out.print(onset.getDepth() + "\t");
             System.out.print(onset.getIncrement() + "\t");
 
             HierarchicalDur duration = note.getDuration();
-            System.out.print(duration.getLevel() + "\t");
+            System.out.print(duration.getDepth() + "\t");
             System.out.print(duration.getIncrement() + "\t");
 
             System.out.print(note.getVoice() + "\t");
