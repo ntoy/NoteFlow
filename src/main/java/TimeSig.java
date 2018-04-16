@@ -10,12 +10,10 @@ public class TimeSig {
     private byte[] parentBasis;
     private byte[] basis;
 
-    private static final int BASIS_LENGTH = 5;
-
     public TimeSig(int beats, int beatType) {
         this.beats = beats;
         this.beatType = beatType;
-        basis = new byte[BASIS_LENGTH];
+        basis = new byte[Constants.BASIS_LENGTH];
         parentBasis = null;
 
         // Find (a, b) such that beats == 2^a * 3^b, assuming n is of that form
@@ -33,7 +31,7 @@ public class TimeSig {
             throw new RuntimeException("n is not a product of threes and twos");
         }
 
-        if (twoExponent + threeExponent >= BASIS_LENGTH) {
+        if (twoExponent + threeExponent >= Constants.BASIS_LENGTH) {
             throw new RuntimeException("Basis container not long enough to represent time signature");
         }
         for (int i = 0; i < twoExponent; i++) {
@@ -42,7 +40,7 @@ public class TimeSig {
         for (int i = twoExponent; i < twoExponent + threeExponent; i++) {
             basis[i] = 3;
         }
-        for (int i = twoExponent + threeExponent; i < BASIS_LENGTH; i++) {
+        for (int i = twoExponent + threeExponent; i < Constants.BASIS_LENGTH; i++) {
             basis[i] = 2;
         }
     }
