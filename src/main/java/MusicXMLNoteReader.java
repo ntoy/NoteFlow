@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 
+import static main.java.Constants.MAX_VOICES;
+
 public class MusicXMLNoteReader implements Runnable {
 
     private static final Comparator<Note> compareByVoice = Comparator.comparingInt(Note::getVoice);
@@ -31,8 +33,6 @@ public class MusicXMLNoteReader implements Runnable {
     noteBackupExpr, pitchStepExpr, pitchOctaveExpr, pitchAlterExpr, durationExpr, restExpr, voiceExpr,
     chordExpr, tieExpr, tupletExpr, actualNotesExpr, normalNotesExpr, normalTypeExpr, tupletTypeExpr,
     graceExpr;
-
-    public static final int MAX_VOICES = 8;
 
     static {
         final XPath xPath = XPathFactory.newInstance().newXPath();
