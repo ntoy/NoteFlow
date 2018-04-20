@@ -9,12 +9,22 @@ public class Pipe<T> {
 
     public PipeSource source;
     public PipeSink sink;
+    public int inCount;
+    public int outCount;
 
     public Pipe(int capacity) {
         queue = new ArrayBlockingQueue<>(capacity);
         closed = false;
         source = new PipeSource();
         sink = new PipeSink();
+    }
+
+    public int getInCount() {
+        return inCount;
+    }
+
+    public int getOutCount() {
+        return outCount;
     }
 
     public class PipeSource {
@@ -24,6 +34,7 @@ public class Pipe<T> {
         public void write(T e){
             try {
                 queue.put(Optional.of(e));
+                inCount++;
             } catch (InterruptedException e1) {
                 e1.printStackTrace();
             }
@@ -51,6 +62,7 @@ public class Pipe<T> {
                 e.printStackTrace();
             }
             if (optional.isPresent()) {
+                outCount++;
                 return optional.get();
             }
             else {
