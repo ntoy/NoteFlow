@@ -60,7 +60,7 @@ public class NoteInKey extends NoteInRhythm {
         System.out.println(noteInKey.getKeyCircleFifths());
     }
 
-    private static int circle5(int plainIndex) {
+    static int circle5(int plainIndex) {
         int targetIndex = plainIndex % 12;
         int index = 0;
         int circle5Index = 0;
