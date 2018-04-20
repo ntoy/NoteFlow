@@ -32,7 +32,7 @@ public class MusicXMLNoteReader implements Runnable {
     private static final XPathExpression measureExpr, partExpr, divisionsExpr, beatsExpr, beatTypeExpr,
     noteBackupExpr, pitchStepExpr, pitchOctaveExpr, pitchAlterExpr, durationExpr, restExpr, voiceExpr,
     chordExpr, tieExpr, tupletExpr, actualNotesExpr, normalNotesExpr, normalTypeExpr, tupletTypeExpr,
-    graceExpr;
+    graceExpr, altEndExpr;
 
     static {
         final XPath xPath = XPathFactory.newInstance().newXPath();
@@ -57,7 +57,7 @@ public class MusicXMLNoteReader implements Runnable {
             normalTypeExpr = xPath.compile("./time-modification/normal-type");
             tupletTypeExpr = xPath.compile("./notations/tuplet/tuplet-actual/tuplet-type");
             graceExpr = xPath.compile("./grace");
-
+            altEndExpr = xPath.compile("./part/barline/ending");
         } catch (XPathExpressionException e) {
             throw new RuntimeException("Failed to compile XPath expressions");
         }
@@ -79,9 +79,6 @@ public class MusicXMLNoteReader implements Runnable {
 
     @Override
     public void run() {
-        // TODO: handle triplets and general tuplets (view as short-term time sig change)
-        // TODO: handle pickups
-
         int divisions = 0;
         timeSig = null;
         prevTimeSig = null;
@@ -133,6 +130,8 @@ public class MusicXMLNoteReader implements Runnable {
         // iterate over measures
         for (int i = 0; i < measureList.getLength(); i++) {
             Node measureNode = measureList.item(i);
+            Element altEndingNode = null; // node indicating alternate ending for this measure
+            Element nextAltEndingNode = null; // node indicating alternate ending for next measure
 
             // get list of parts
             NodeList partList = null;
@@ -140,6 +139,20 @@ public class MusicXMLNoteReader implements Runnable {
                 partList = (NodeList) partExpr.evaluate(measureNode, XPathConstants.NODESET);
             } catch (XPathExpressionException e) {
                 failEvaluate();
+            }
+
+            // find out if this is an alternate ending that is not the last
+            try {
+                altEndingNode = (Element) altEndExpr.evaluate(measureNode, XPathConstants.NODE);
+                if (i < measureList.getLength() - 1) {
+                    nextAltEndingNode = (Element)
+                            altEndExpr.evaluate(measureList.item(i+1), XPathConstants.NODE);
+                }
+            } catch (XPathExpressionException e) {
+                failEvaluate();
+            }
+            if (altEndingNode != null && nextAltEndingNode != null) {
+                continue;
             }
 
             // iterate over parts
@@ -173,12 +186,8 @@ public class MusicXMLNoteReader implements Runnable {
                     failEvaluate();
                 }
                 if (timeSigBeatsNode != null && timeSigBeatTypeNode != null) {
-//                    boolean timeSigChange = (timeSig != null);
                     timeSig = new TimeSig(Integer.parseInt(timeSigBeatsNode.getTextContent()),
                             Integer.parseInt(timeSigBeatTypeNode.getTextContent()));
-//                    if (timeSigChange) {
-//                        cutTiesAndInsertGhost();
-//                    }
                 }
                 if (timeSig == null) {
                     timeSig = new TimeSig(4, 4);
@@ -371,17 +380,33 @@ public class MusicXMLNoteReader implements Runnable {
                 }
             }
 
-            // if measure is not full, assume it is a pickup
-            Fraction measurePosition = curTime.add(prevDur).getMeasureFrac();
-            if (!measurePosition.equals(Fraction.ZERO)) {
-                Duration increase = new Duration(Fraction.ONE.subtract(measurePosition));
-                for (int n = startOfNewNotes; n < notesToOutput.size(); n++) {
-                    Note note = notesToOutput.get(n);
-                    note.setOnsetTime(note.getOnsetTime().add(increase));
+            // cancel all fake-news ties
+            for (ArrayList<Note> outstandingTies : outstandingTiesPerVoice) {
+                int numRemoved = 0;
+                int initialSize = outstandingTies.size();
+                for (int noteIndex = 0; noteIndex < initialSize; noteIndex++) {
+                    Note n = outstandingTies.get(noteIndex - numRemoved);
+                    if (n.getOnsetTime().add(n.getDuration()).compareTo(curTime.add(prevDur)) < 0) {
+                        outstandingTies.remove(noteIndex - numRemoved);
+                        notesToOutput.add(n);
+                        numRemoved++;
+                    }
                 }
-                AbsoluteTime ghostTime = curTime.add(prevDur).subtract(new Duration(measurePosition));
-                notesToOutput.add(Note.newGhost(ghostTime, timeSig));
-                curTime = curTime.add(increase);
+            }
+
+            // if first measure is not full, assume it is a pickup
+            if (i == 0) {
+                Fraction measurePosition = curTime.add(prevDur).getMeasureFrac();
+                if (!measurePosition.equals(Fraction.ZERO)) {
+                    Duration increase = new Duration(Fraction.ONE.subtract(measurePosition));
+                    for (int n = startOfNewNotes; n < notesToOutput.size(); n++) {
+                        Note note = notesToOutput.get(n);
+                        note.setOnsetTime(note.getOnsetTime().add(increase));
+                    }
+                    AbsoluteTime ghostTime = curTime.add(prevDur).subtract(new Duration(measurePosition));
+                    notesToOutput.add(Note.newGhost(ghostTime, timeSig));
+                    curTime = curTime.add(increase);
+                }
             }
 
             // lexicographically sort by (onset time, pitch, voice)
@@ -389,6 +414,7 @@ public class MusicXMLNoteReader implements Runnable {
             notesToOutput.sort(compareByPitch);
             notesToOutput.sort(compareByOnsetTime);
 
+            // find oldest outstanding tie onset across all voices
             AbsoluteTime oldestOutstandingTieOnset = curTime.add(prevDur);
             for (int v = 0; v < MAX_VOICES; v++) {
                 ArrayList<Note> outstandingTies = outstandingTiesPerVoice.get(v);
@@ -400,6 +426,7 @@ public class MusicXMLNoteReader implements Runnable {
                 }
             }
 
+            // output all notes occurring before the oldest outstanding tie
             int n;
             for (n = 0; n < notesToOutput.size(); n++) {
                 Note note = notesToOutput.get(n);
