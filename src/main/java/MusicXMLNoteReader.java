@@ -42,7 +42,7 @@ public class MusicXMLNoteReader implements Runnable {
             divisionsExpr = xPath.compile("./attributes/divisions");
             beatsExpr = xPath.compile("./attributes/time/beats");
             beatTypeExpr = xPath.compile("./attributes/time/beat-type");
-            noteBackupExpr = xPath.compile("./note | ./backup");
+            noteBackupExpr = xPath.compile("./note | ./backup | ./forward");
             pitchStepExpr = xPath.compile("./pitch/step");
             pitchOctaveExpr = xPath.compile("./pitch/octave");
             pitchAlterExpr = xPath.compile("./pitch/alter");
@@ -71,10 +71,12 @@ public class MusicXMLNoteReader implements Runnable {
     private Duration prevDur;
     private TimeSig timeSig;
     private TimeSig prevTimeSig;
+    private int voice;
 
     public MusicXMLNoteReader(File inputFile, Pipe<Note>.PipeSource outputPipe) {
         this.inputFile = inputFile;
         this.outputPipe = outputPipe;
+        voice = -1;
     }
 
     @Override
@@ -202,7 +204,7 @@ public class MusicXMLNoteReader implements Runnable {
                     failEvaluate();
                 }
 
-                // iterate over notes/backups in measure
+                // iterate over notes/backups/forwards in measure
                 for (int k = 0; k < noteBackupList.getLength(); k++) {
                     Node noteOrBackup = noteBackupList.item(k);
 
@@ -286,7 +288,14 @@ public class MusicXMLNoteReader implements Runnable {
                                 alter = Integer.parseInt(pitchAlterElement.getTextContent());
                             }
                             Pitch pitch = new Pitch(pitchOctave, pitchStep, alter);
-                            int voice = Integer.parseInt(voiceElement.getTextContent());
+
+                            // if no voice specification, use previous voice
+                            if (voiceElement != null) {
+                                voice = Integer.parseInt(voiceElement.getTextContent());
+                            }
+                            else if (voice == -1) {
+                                throw new RuntimeException("No voice information for first note");
+                            }
 
                             // handle ties
                             boolean isTieStart = false, isTieStop = false;
@@ -364,17 +373,18 @@ public class MusicXMLNoteReader implements Runnable {
                         prevDur = duration;
                         prevTimeSig = timeSig;
                     }
-                    else { // if is backup
-                        Node backupNode = noteOrBackup;
+                    else { // if is forward or backup
+                        Node backupForwardNode = noteOrBackup;
                         Element backupDurElement = null;
                         try {
                             backupDurElement = (Element)
-                                    durationExpr.evaluate(backupNode, XPathConstants.NODE);
+                                    durationExpr.evaluate(backupForwardNode, XPathConstants.NODE);
                         } catch (XPathExpressionException e) {
                             failEvaluate();
                         }
                         int backupDurInDivs = Integer.parseInt(backupDurElement.getTextContent());
-                        curTime = curTime.add(new Duration(-backupDurInDivs * timeSig.getBeatType(),
+                        int sign = backupForwardNode.getNodeName().equals("backup") ? -1 : 1;
+                        curTime = curTime.add(new Duration(sign * backupDurInDivs * timeSig.getBeatType(),
                                 4 * divisions * timeSig.getBeats()));
                     }
                 }

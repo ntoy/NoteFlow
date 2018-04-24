@@ -61,14 +61,14 @@ public class HierarchicalRelTime extends AbsoluteTime {
         int i = 0;
 
         while (!remainingFrac.equals(Fraction.ZERO)) {
+            if (i >= basis.length)
+                throw new RuntimeException("Basis of insufficient length to represent this time");
             Fraction timeInDivs = remainingFrac.multiply(basis[i]);
             int timeInWholeDivs = timeInDivs.intValue();
             assert timeInWholeDivs <= Byte.MAX_VALUE;
             treeNotation[i+1] = timeInWholeDivs;
             remainingFrac = timeInDivs.subtract(timeInWholeDivs);
             i++;
-            if (i >= basis.length)
-                throw new RuntimeException("Basis of insufficient length to represent this time");
         }
         return treeNotation;
     }

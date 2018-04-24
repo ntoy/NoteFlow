@@ -28,7 +28,7 @@ public class KeyAnalyzer implements Runnable {
         Duration rRadius = radius.multiply(new Duration(3, 4));
         NoteInRhythm nextNote = null;
 
-        while (windowCenter != null) {
+        while (windowCenter != null && windowCenter.content != null) {
             // shrink window from the left
             while (windowStart.content.getOnsetTime().add(radius).compareTo(windowCenter.content.getOnsetTime()) < 0) {
                 for (int key = 0; key < 12; key++) {
