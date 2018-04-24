@@ -4,9 +4,11 @@ import static main.java.PrintUtil.byteArrayToString;
 
 public class NoteInKeyPrinter implements Runnable {
     private Pipe<NoteInKey>.PipeSink inputPipe;
+    private int startKey;
 
-    public NoteInKeyPrinter(Pipe<NoteInKey>.PipeSink inputPipe) {
+    public NoteInKeyPrinter(Pipe<NoteInKey>.PipeSink inputPipe, int startKey) {
         this.inputPipe = inputPipe;
+        this.startKey = startKey;
     }
 
     @Override
@@ -15,7 +17,7 @@ public class NoteInKeyPrinter implements Runnable {
         NoteInKey prev = null;
         NoteInKey note;
         while ((note = inputPipe.read()) != null) {
-            System.out.print(note.getKeyCircleFifths() + "\t");
+            System.out.print(note.getKeyCircleFifths(startKey) + "\t");
             System.out.print(note.getKeyMode() + "\t");
             System.out.print(note.getRelPitchPlain() + "\t");
 
@@ -30,7 +32,7 @@ public class NoteInKeyPrinter implements Runnable {
             System.out.print(duration.getDepth() + "\t");
             System.out.print(duration.getIncrement() + "\t");
 
-            System.out.print(note.getVoice() + "\t");
+            System.out.print(note.getVoice());
             System.out.println();
 
             prev = note;

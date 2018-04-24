@@ -29,6 +29,10 @@ public class NoteInKey extends NoteInRhythm {
         return circle5(key) - (key >= 12 ? 3 : 0);
     }
 
+    public int getKeyCircleFifths(int startKey) {
+        return remainder((getKeyCircleFifths() - startKey) , 12);
+    }
+
     public int getKeyMode() {
         return key < 12 ? 0 : 1;
     }
