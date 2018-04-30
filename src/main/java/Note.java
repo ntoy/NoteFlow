@@ -9,9 +9,10 @@ public class Note {
     protected Duration duration;
     private TimeSig timeSig;
     private int voice;
+    private int homeKeyCircleFifths;
 
     public Note(Pitch pitch, AbsoluteTime onsetTime, Duration duration,
-                TimeSig timeSig, int voice) {
+                TimeSig timeSig, int voice, int homeKeyCircleFifths) {
         // unspecified pitch and duration are reserved for ghost notes
         if (pitch == null) {
             throw new NullPointerException("pitch cannot be null");
@@ -24,6 +25,7 @@ public class Note {
         this.duration = duration;
         this.timeSig = timeSig;
         this.voice = voice;
+        this.homeKeyCircleFifths = homeKeyCircleFifths;
     }
 
     public Note(Note that) {
@@ -32,6 +34,7 @@ public class Note {
         this.duration = that.duration;
         this.timeSig = that.timeSig;
         this.voice = that.voice;
+        this.homeKeyCircleFifths = that.homeKeyCircleFifths;
     }
 
     public Pitch getPitch() {
@@ -56,6 +59,10 @@ public class Note {
 
     public int getVoice() {
         return voice;
+    }
+
+    public int getHomeKeyCircleFifths() {
+        return homeKeyCircleFifths;
     }
 
     public boolean isGhost() {

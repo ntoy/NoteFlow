@@ -29,8 +29,8 @@ public class NoteInKey extends NoteInRhythm {
         return circle5(key) - (key >= 12 ? 3 : 0);
     }
 
-    public int getKeyCircleFifths(int startKey) {
-        return remainder((getKeyCircleFifths() - startKey) , 12);
+    public int getRelKeyCircleFifths() {
+        return remainder((getKeyCircleFifths() - getHomeKeyCircleFifths()) , 12);
     }
 
     public int getKeyMode() {
@@ -53,15 +53,6 @@ public class NoteInKey extends NoteInRhythm {
     public String toString() {
         return super.toString() + " in " + new Pitch(0, key, 0).getPitchNameSharp()
                 + (key < 12 ? " major" : " minor");
-    }
-
-    public static void main(String[] args) {
-        Note note = new Note(new Pitch(60), new AbsoluteTime(2, 1, 4),
-                new Duration(1, 4),
-                new TimeSig(4, 4), 1);
-        NoteInRhythm noteInRhythm = new NoteInRhythm(note, null);
-        NoteInKey noteInKey = new NoteInKey(noteInRhythm, 3);
-        System.out.println(noteInKey.getKeyCircleFifths());
     }
 
     static int circle5(int plainIndex) {

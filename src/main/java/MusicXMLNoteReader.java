@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 
+import static main.java.LongDivision.*;
+
 import static main.java.Constants.MAX_VOICES;
 
 public class MusicXMLNoteReader implements Runnable {
@@ -32,7 +34,7 @@ public class MusicXMLNoteReader implements Runnable {
     private static final XPathExpression measureExpr, partExpr, divisionsExpr, beatsExpr, beatTypeExpr,
     noteBackupExpr, pitchStepExpr, pitchOctaveExpr, pitchAlterExpr, durationExpr, restExpr, voiceExpr,
     chordExpr, tieExpr, tupletExpr, actualNotesExpr, normalNotesExpr, normalTypeExpr, tupletTypeExpr,
-    graceExpr, altEndExpr;
+    graceExpr, altEndExpr, homeKeyExpr;
 
     static {
         final XPath xPath = XPathFactory.newInstance().newXPath();
@@ -58,6 +60,7 @@ public class MusicXMLNoteReader implements Runnable {
             tupletTypeExpr = xPath.compile("./notations/tuplet/tuplet-actual/tuplet-type");
             graceExpr = xPath.compile("./grace");
             altEndExpr = xPath.compile("./part/barline/ending");
+            homeKeyExpr = xPath.compile("./attributes/key/fifths");
         } catch (XPathExpressionException e) {
             throw new RuntimeException("Failed to compile XPath expressions");
         }
@@ -72,11 +75,13 @@ public class MusicXMLNoteReader implements Runnable {
     private TimeSig timeSig;
     private TimeSig prevTimeSig;
     private int voice;
+    private int homeKeyCircleFifths;
 
     public MusicXMLNoteReader(File inputFile, Pipe<Note>.PipeSource outputPipe) {
         this.inputFile = inputFile;
         this.outputPipe = outputPipe;
         voice = -1;
+        homeKeyCircleFifths = 0;
     }
 
     @Override
@@ -162,7 +167,8 @@ public class MusicXMLNoteReader implements Runnable {
                 Node partNode = partList.item(j);
 
                 Element divisionsNode = null;
-                Element timeSigBeatsNode= null;
+                Element homeKeyNode = null;
+                Element timeSigBeatsNode = null;
                 Element timeSigBeatTypeNode = null;
 
                 // get number of divisions in part in measure
@@ -173,6 +179,19 @@ public class MusicXMLNoteReader implements Runnable {
                 }
                 if (divisionsNode != null) {
                     divisions = Integer.parseInt(divisionsNode.getTextContent());
+                }
+
+                if (i == 0 && j == 0) {
+                    // get home key
+                    try {
+                        homeKeyNode = (Element) homeKeyExpr.evaluate(partNode, XPathConstants.NODE);
+                    } catch (XPathExpressionException e) {
+                        failEvaluate();
+                    }
+                    if (homeKeyNode != null) {
+                        homeKeyCircleFifths = Integer.parseInt(homeKeyNode.getTextContent());
+                        homeKeyCircleFifths = remainder(homeKeyCircleFifths, 12);
+                    }
                 }
 
                 // get time signature
@@ -327,7 +346,8 @@ public class MusicXMLNoteReader implements Runnable {
                                 if (continuedNoteIdx == outstandingTies.size()) {
                                     // tie must have been cut short cause of time sig change
                                     // so treat as just tie start
-                                    continuedNote = new Note(pitch, curTime, duration, timeSig, voice);
+                                    continuedNote = new Note(pitch, curTime, duration, timeSig, voice,
+                                            homeKeyCircleFifths);
                                     outstandingTies.add(continuedNote);
                                 }
                                 else {
@@ -346,7 +366,8 @@ public class MusicXMLNoteReader implements Runnable {
                                 if (continuedNoteIdx == outstandingTies.size()) {
                                     // tie must have been cut short cause of time sig change
                                     // so treat as untied note
-                                    notesToOutput.add(new Note(pitch, curTime, duration, timeSig, voice));
+                                    notesToOutput.add(new Note(pitch, curTime, duration, timeSig, voice,
+                                            homeKeyCircleFifths));
                                 }
                                 else {
                                     // extend duration of tie chain by that of new note, and output
@@ -356,11 +377,13 @@ public class MusicXMLNoteReader implements Runnable {
                                 }
                             }
                             else if (isTieStart) {
-                                continuedNote = new Note(pitch, curTime, duration, timeSig, voice);
+                                continuedNote = new Note(pitch, curTime, duration, timeSig, voice,
+                                        homeKeyCircleFifths);
                                 outstandingTies.add(continuedNote);
                             }
                             else {
-                                notesToOutput.add(new Note(pitch, curTime, duration, timeSig, voice));
+                                notesToOutput.add(new Note(pitch, curTime, duration, timeSig, voice,
+                                        homeKeyCircleFifths));
                             }
                         }
 

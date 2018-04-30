@@ -10,7 +10,6 @@ public class Main {
 //                "main/res/musicxml30");
 
         File inputFile = new File(args[0]);
-        int startKey = Integer.parseInt(args[1]);
         Pipe<Note> notePipe = new Pipe<>(128);
         Pipe<NoteInRhythm> noteInRhythmPipe = new Pipe<>(128);
         Pipe<NoteInKey> noteInKeyPipe = new Pipe<>(128);
@@ -20,7 +19,7 @@ public class Main {
                 new Thread(new MetricalConverter(notePipe.sink, noteInRhythmPipe.source));
         Thread keyAnalyzer = new Thread(new KeyAnalyzer(noteInRhythmPipe.sink, noteInKeyPipe.source,
                 new Duration(2, 1)));
-        Thread smartNotePrinter = new Thread(new NoteInKeyPrinter(noteInKeyPipe.sink, startKey));
+        Thread smartNotePrinter = new Thread(new NoteInKeyPrinter(noteInKeyPipe.sink));
 
         musicMXLNoteReader.start();
         keyAnalyzer.start();
