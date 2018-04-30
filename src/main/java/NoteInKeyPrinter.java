@@ -21,7 +21,7 @@ public class NoteInKeyPrinter implements Runnable {
             System.out.print(note.getKeyMode() + "\t");
             System.out.print(note.getRelPitchPlain() + "\t");
 
-            System.out.print(note.getPitch().getOctave() + "\t");
+            System.out.print(note.getPitch().getKeyRelOctave(startKey) + "\t");
             System.out.print(byteArrayToString(note.getTimeSig().getBasis()) + "\t");
 
             HierarchicalRelTime onset = note.getOnsetTime();

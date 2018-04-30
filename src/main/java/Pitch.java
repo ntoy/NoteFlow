@@ -20,9 +20,11 @@ public class Pitch implements Comparable<Pitch> {
         this.midiIndex = 12 * (octave + 1) + noteNameOffsets[noteNames.indexOf(pitchName)] + alter;
     }
 
-    public Pitch(int octave, int relativePitchIndex, int keyCircleFifths, int mode) {
+    public Pitch(int keyRelOctave, int relativePitchIndex, int keyCircleFifths,
+                 int homeKeyCircleFifths, int mode) {
         // use the fact that circle 5 is its own inverse
-        this.midiIndex = 12 * (octave + 1) + remainder(relativePitchIndex
+        int ref = new Pitch(0, NoteInKey.circle5(homeKeyCircleFifths), 0).midiIndex;
+        this.midiIndex = ref + 12 * keyRelOctave + remainder(relativePitchIndex
                 + NoteInKey.circle5(keyCircleFifths) + (mode == 1 ? -3: 0), 12);
     }
 
@@ -35,7 +37,12 @@ public class Pitch implements Comparable<Pitch> {
     }
 
     public int getOctaveOffset(Pitch that) {
-        return quotient(this.midiIndex - that.midiIndex, 12, -6);
+        return quotient(this.midiIndex - that.midiIndex, 12);
+    }
+
+    public int getKeyRelOctave(int homeKeyCircleFifths) {
+        Pitch ref = new Pitch(0, NoteInKey.circle5(homeKeyCircleFifths), 0);
+        return getOctaveOffset(ref);
     }
 
     public int getPitchIndex() {
@@ -100,8 +107,5 @@ public class Pitch implements Comparable<Pitch> {
         System.out.println(pitch.equals(new Pitch(60)));
         System.out.println(pitch.equals(new Pitch(61)));
         System.out.println(pitch.equals(pitch));
-
-        pitch = new Pitch(4, 8, 2, 1);
-        System.out.println(pitch.getMidiIndex());
     }
 }

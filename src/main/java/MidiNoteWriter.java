@@ -1,7 +1,5 @@
 package main.java;
 
-import org.apache.commons.io.FilenameUtils;
-
 import javax.sound.midi.*;
 import java.io.*;
 import java.util.Arrays;
@@ -13,21 +11,28 @@ import static main.java.Constants.*;
 public class MidiNoteWriter {
     private static int TICKS_PER_MEASURE = 1440;
 
-    public static void main(String[] args)  {
-
-        if (args.length != 1) {
-            System.out.println("Usage: java MidiNoteWriter [filename]");
+    public static void main(String[] args) {
+        String inputFilename;
+        int homeKey;
+        String outputFilename;
+        try {
+            inputFilename = args[0];
+            homeKey = Integer.parseInt(args[1]);
+            outputFilename = args[2];
+        } catch (IndexOutOfBoundsException | NumberFormatException e) {
+            System.out.println("Usage: java MidiNoteWriter [input file] [home key] [output file]");
+            return;
         }
 
         BufferedReader reader = null;
 
         try {
-            reader = new BufferedReader(new FileReader(args[0]));
+            reader = new BufferedReader(new FileReader(inputFilename));
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Input file not found");
         }
 
-        File midiFile = new File(FilenameUtils.getBaseName(args[0]) + ".mid");
+        File midiFile = new File(outputFilename);
         Sequence midiSeq = null;
         try {
             midiSeq = new Sequence(Sequence.PPQ,TICKS_PER_MEASURE/4, MAX_VOICES);
@@ -81,8 +86,13 @@ public class MidiNoteWriter {
                 int[] curTreeNotation = curTreeNotationByVoice[voice];
 
                 // determine absolute pitch
-                Pitch pitch = new Pitch(octave, relPitch, keyCircleFifths, keyMode);
-                int midiIndex = pitch.getMidiIndex() % 128;
+                Pitch pitch = new Pitch(octave, relPitch, keyCircleFifths, homeKey, keyMode);
+                int midiIndex = pitch.getMidiIndex();
+                // correct octave
+                while (midiIndex < 0)
+                    midiIndex += 12;
+                while (midiIndex >= 128)
+                    midiIndex -= 12;
 
                 // round up time in case of basis change
                 int depthOfChange = firstDifferingIndex(basis, prevBasis);
