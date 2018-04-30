@@ -71,13 +71,8 @@ public class MusicXMLPreprocess {
         }
 
         for (File musicXML: musicXMLs) {
-            String partwiseName = FilenameUtils.getBaseName(musicXML.getName()) + "_partwise" + "."
-                    + FilenameUtils.getExtension(musicXML.getName());
-            String partwisePath = partwiseLoc + partwiseName;
-
-            String timewiseName = FilenameUtils.getBaseName(musicXML.getName()) + "_timewise" + "."
-                    + FilenameUtils.getExtension(musicXML.getName());
-            String timewisePath = timewiseLoc + timewiseName;
+            String partwisePath = FilenameUtils.concat(partwiseLoc, musicXML.getName());
+            String timewisePath = FilenameUtils.concat(timewiseLoc, musicXML.getName());
 
             File tempFile = replaceDtdLocations(musicXML, partwiseDtd, timewiseDtd);
             convert(tempFile, partToTimeFile, timewisePath);
