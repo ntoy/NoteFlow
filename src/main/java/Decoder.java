@@ -8,7 +8,7 @@ import static javax.sound.midi.ShortMessage.NOTE_OFF;
 import static javax.sound.midi.ShortMessage.NOTE_ON;
 import static main.java.Constants.*;
 
-public class MidiNoteWriter {
+public class Decoder {
     private static int TICKS_PER_MEASURE = 1440;
 
     public static void main(String[] args) {
@@ -20,7 +20,7 @@ public class MidiNoteWriter {
             homeKey = Integer.parseInt(args[1]);
             outputFilename = args[2];
         } catch (IndexOutOfBoundsException | NumberFormatException e) {
-            System.out.println("Usage: java MidiNoteWriter [input file] [home key] [output file]");
+            System.out.println("Usage: java Decoder [input file] [home key] [output file]");
             return;
         }
 

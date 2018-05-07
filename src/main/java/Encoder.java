@@ -2,7 +2,7 @@ package main.java;
 
 import java.io.File;
 
-public class Main {
+public class Encoder {
     public static void main(String[] args) {
         Thread.UncaughtExceptionHandler handler = (t, e) -> {
             System.err.println(e.getMessage());
