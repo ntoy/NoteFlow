@@ -1,1 +1,1 @@
-# A framework for generating music with machine learning by encoding using music theory principles
+# A framework for generating music with machine learning and music theory
