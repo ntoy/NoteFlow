@@ -4,10 +4,10 @@ import java.io.File;
 
 public class Main {
     public static void main(String[] args) {
-//        MusicXMLPreprocess.preprocessMusicXMLs("main/res/MusicXML/original",
-//                "main/res/MusicXML/partwise",
-//                "main/res/MusicXML/timewise",
-//                "main/res/musicxml30");
+        Thread.UncaughtExceptionHandler handler = (t, e) -> {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        };
 
         File inputFile = new File(args[0]);
         Pipe<Note> notePipe = new Pipe<>(128);
@@ -21,9 +21,23 @@ public class Main {
                 new Duration(2, 1)));
         Thread smartNotePrinter = new Thread(new NoteInKeyPrinter(noteInKeyPipe.sink));
 
+        musicMXLNoteReader.setUncaughtExceptionHandler(handler);
+        keyAnalyzer.setUncaughtExceptionHandler(handler);
+        metricalConverter.setUncaughtExceptionHandler(handler);
+        smartNotePrinter.setUncaughtExceptionHandler(handler);
+
         musicMXLNoteReader.start();
         keyAnalyzer.start();
         metricalConverter.start();
         smartNotePrinter.start();
+
+        try {
+            musicMXLNoteReader.join();
+            keyAnalyzer.join();
+            metricalConverter.join();
+            smartNotePrinter.join();
+        } catch (InterruptedException e) {
+            return;
+        }
     }
 }
